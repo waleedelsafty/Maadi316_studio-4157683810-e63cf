@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useFirestore, useAuth, useCollection } from '@/firebase';
@@ -59,39 +60,16 @@ export default function HomePage() {
     }
   };
 
-  const handleSignOut = async () => {
-    if (!auth) return;
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Error signing out', error);
-    }
-  };
-
   if (!user || !firestore) {
     // AuthProvider handles the redirect, so we can just show a loader or null
     return null;
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-8 sm:p-24">
+    <main className="flex min-h-screen flex-col items-center p-8 sm:p-12">
       <div className="w-full max-w-2xl">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">My Notes</h1>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" asChild>
-                <Link href="/settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                </Link>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSignOut}
-            >
-              Sign Out
-            </Button>
-          </div>
         </div>
 
         <Card className="mb-8">

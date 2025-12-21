@@ -5,6 +5,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/components/app-provider";
 import { FirebaseClientProvider, initializeFirebase } from "@/firebase";
+import { MainNav } from "@/components/main-nav";
 
 const inter = Inter({ subsets: ["latin"] });
 const firebaseApp = initializeFirebase();
@@ -19,7 +20,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <AppProvider>
           <FirebaseClientProvider firebaseApp={firebaseApp}>
-            {children}
+            <MainNav>{children}</MainNav>
           </FirebaseClientProvider>
         </AppProvider>
       </body>

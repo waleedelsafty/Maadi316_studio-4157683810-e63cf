@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useFirestore, useCollection } from '@/firebase';
@@ -75,15 +76,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-8 sm:p-24">
+    <main className="flex min-h-screen flex-col items-center p-8 sm:p-12">
       <div className="w-full max-w-2xl">
         <div className="flex items-center mb-8">
-            <Button variant="outline" size="icon" asChild>
-                <Link href="/">
-                    <ArrowLeft className="h-4 w-4" />
-                </Link>
-            </Button>
-            <h1 className="text-4xl font-bold ml-4">Settings</h1>
+            <h1 className="text-4xl font-bold">Settings</h1>
         </div>
 
         <Card className="mb-8">
