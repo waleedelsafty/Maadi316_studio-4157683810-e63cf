@@ -3,7 +3,7 @@
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
   User,
 } from 'firebase/auth';
 import { app } from '@/lib/firebase/config';
@@ -26,7 +26,8 @@ export default function LoginPage() {
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      // Use signInWithRedirect instead of signInWithPopup
+      await signInWithRedirect(auth, provider);
     } catch (error) {
       console.error('Error signing in with Google', error);
     }

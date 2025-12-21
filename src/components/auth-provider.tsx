@@ -1,7 +1,7 @@
 "use client";
 
 import { app } from "@/lib/firebase/config";
-import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import { getAuth, onAuthStateChanged, User, getRedirectResult } from "firebase/auth";
 import React, {
   createContext,
   useContext,
@@ -16,15 +16,28 @@ export const AuthContext = createContext<{ user: User | null }>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const auth = getAuth(app);
 
   useEffect(() => {
-    const auth = getAuth(app);
+    // This handles the result from the redirect
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          // This is the signed-in user
+          setUser(result.user);
+        }
+      })
+      .catch((error) => {
+        console.error("Error getting redirect result", error);
+      });
+
+    // This listens for any future auth state changes
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [auth]);
 
   const value = useMemo(() => ({ user }), [user]);
 
