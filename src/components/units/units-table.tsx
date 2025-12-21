@@ -21,6 +21,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Unit } from "@/lib/types";
 import { getColumns } from "./columns";
 import { Skeleton } from "../ui/skeleton";
+import { Switch } from "../ui/switch";
+import { Label } from "../ui/label";
 
 interface UnitsTableProps {
   units: Unit[];
@@ -30,8 +32,9 @@ interface UnitsTableProps {
 
 export function UnitsTable({ units, isLoading, showFinancials }: UnitsTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [showQuarterly, setShowQuarterly] = React.useState(false);
   
-  const columns = React.useMemo(() => getColumns(showFinancials), [showFinancials]);
+  const columns = React.useMemo(() => getColumns(showFinancials, showQuarterly), [showFinancials, showQuarterly]);
 
   const table = useReactTable({
     data: units,
@@ -47,6 +50,12 @@ export function UnitsTable({ units, isLoading, showFinancials }: UnitsTableProps
   return (
     <Card>
       <CardContent>
+        {showFinancials && (
+            <div className="flex items-center space-x-2 my-4">
+                <Switch id="fee-display-mode" checked={showQuarterly} onCheckedChange={setShowQuarterly} />
+                <Label htmlFor="fee-display-mode">Show Quarterly Fees</Label>
+            </div>
+        )}
         <div className="rounded-md border">
           <Table>
             <TableHeader>

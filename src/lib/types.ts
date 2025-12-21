@@ -4,7 +4,14 @@ export interface BuildingSettings {
     floor_standard_sqm: number;
   };
   financials: {
+    calculation_method: "budget_based" | "rate_based";
     current_annual_budget: number;
+    rate_per_sqm: number;
+    type_multipliers: {
+      Shop: number;
+      Office: number;
+      // Other types default to 1
+    };
     last_recalculation_date: string; // ISO string
   };
 }

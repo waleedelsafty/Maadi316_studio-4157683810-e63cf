@@ -42,7 +42,10 @@ export function calculateAreaShares(units: Unit[], settings: BuildingSettings): 
       : 0;
 
     const total_gross_sqm = unit.net_sqm + share_local_common + share_global_common;
-    const weighted_billing_area = total_gross_sqm * unit.type_factor;
+    
+    const type_factor = settings.financials.type_multipliers[unit.type as keyof typeof settings.financials.type_multipliers] || 1.0;
+    const weighted_billing_area = total_gross_sqm * type_factor;
+
 
     return {
       ...unit,
@@ -50,40 +53,42 @@ export function calculateAreaShares(units: Unit[], settings: BuildingSettings): 
       share_global_common,
       total_gross_sqm,
       weighted_billing_area,
+      type_factor,
     };
   });
 }
 
 
 /**
- * Algorithm B: The "Budget-Based" Fee Calculator
- * Distributes the total budget across units based on their weighted area.
+ * Algorithm B: The "Budget-Based" or "Rate-Based" Fee Calculator
  */
-export function calculateFees(units: Unit[], newAnnualBudget: number): Unit[] {
-  // Create a map for easy lookup of units by code
-  const unitsMap = new Map(units.map(u => [u.code, u]));
+export function calculateFees(units: Unit[], settings: BuildingSettings): Unit[] {
+    const { calculation_method, current_annual_budget, rate_per_sqm } = settings.financials;
+    
+    // Create a list of billable units (not a child of another unit)
+    const billableUnits = units.filter(u => u.billing_parent_code === null);
+    
+    // Calculate the effective weighted area for each billable unit, rolling up children
+    const billableUnitsWithEffectiveArea = billableUnits.map(parent => {
+        let effective_weighted_billing_area = parent.weighted_billing_area;
 
-  // Create a list of billable units (not a child of another unit)
-  const billableUnits = units.filter(u => u.billing_parent_code === null);
-  
-  // Calculate the effective weighted area for each billable unit, rolling up children
-  const billableUnitsWithEffectiveArea = billableUnits.map(parent => {
-    let effective_weighted_billing_area = parent.weighted_billing_area;
+        // Find children and add their weighted area
+        const children = units.filter(u => u.billing_parent_code === parent.code);
+        children.forEach(child => {
+        effective_weighted_billing_area += child.weighted_billing_area;
+        });
 
-    // Find children and add their weighted area
-    const children = units.filter(u => u.billing_parent_code === parent.code);
-    children.forEach(child => {
-      effective_weighted_billing_area += child.weighted_billing_area;
+        return { ...parent, effective_weighted_billing_area };
     });
 
-    return { ...parent, effective_weighted_billing_area };
-  });
+    let costPerPoint = 0;
 
-  // Calculate total weight across all billable units
-  const totalWeight = billableUnitsWithEffectiveArea.reduce((sum, u) => sum + u.effective_weighted_billing_area, 0);
-
-  // Calculate the cost per "point" of weighted area
-  const costPerPoint = totalWeight > 0 ? newAnnualBudget / totalWeight : 0;
+    if (calculation_method === 'budget_based') {
+        const totalWeight = billableUnitsWithEffectiveArea.reduce((sum, u) => sum + u.effective_weighted_billing_area, 0);
+        costPerPoint = totalWeight > 0 ? current_annual_budget / totalWeight : 0;
+    } else { // rate_based
+        costPerPoint = rate_per_sqm;
+    }
   
   // Distribute the new fee to each unit
   const updatedUnits = units.map(unit => {
@@ -92,15 +97,28 @@ export function calculateFees(units: Unit[], newAnnualBudget: number): Unit[] {
       return { ...unit, current_maintenance_fee: 0 };
     }
 
-    // Find the corresponding billable unit with its calculated effective area
     const billableUnit = billableUnitsWithEffectiveArea.find(u => u.code === unit.code);
+
     if (billableUnit) {
-      const new_fee = billableUnit.effective_weighted_billing_area * costPerPoint;
-      return { ...unit, current_maintenance_fee: new_fee };
+        let new_fee = 0;
+        if (calculation_method === 'budget_based') {
+            new_fee = billableUnit.effective_weighted_billing_area * costPerPoint;
+        } else { // rate_based
+            // For rate based, costPerPoint is the rate_per_sqm. The fee is rate * GROSS area (not weighted).
+            // But we still need to roll up the gross area of children.
+            let effective_gross_area = billableUnit.total_gross_sqm;
+            const children = units.filter(u => u.billing_parent_code === billableUnit.code);
+            children.forEach(child => {
+                effective_gross_area += child.total_gross_sqm;
+            });
+            // The final fee is rate * effective_gross_area * type_factor
+            new_fee = effective_gross_area * costPerPoint * billableUnit.type_factor;
+        }
+       return { ...unit, current_maintenance_fee: new_fee };
     }
     
-    // Should not happen, but as a fallback
-    return { ...unit, current_maintenance_fee: unit.weighted_billing_area * costPerPoint };
+    // Fallback for non-billable units that were somehow not filtered, should not happen.
+    return { ...unit, current_maintenance_fee: 0 };
   });
 
   return updatedUnits;

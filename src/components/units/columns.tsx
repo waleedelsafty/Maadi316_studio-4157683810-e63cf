@@ -20,7 +20,7 @@ const UnitTypeIcon = ({ type }: { type: Unit["type"] }) => {
 };
 
 
-export const getColumns = (showFinancials: boolean): ColumnDef<Unit>[] => [
+export const getColumns = (showFinancials: boolean, showQuarterly: boolean): ColumnDef<Unit>[] => [
   {
     accessorKey: "code",
     header: ({ column }) => (
@@ -61,13 +61,14 @@ export const getColumns = (showFinancials: boolean): ColumnDef<Unit>[] => [
   },
   {
     accessorKey: "current_maintenance_fee",
-    header: "Maintenance Fee",
+    header: `Maint. Fee (${showQuarterly ? 'Quarterly' : 'Annual'})`,
     cell: ({ row }) => {
         const fee = row.original.current_maintenance_fee;
         if (row.original.billing_parent_code) {
             return <Badge variant="secondary">Rolled up</Badge>
         }
-        return formatCurrency(fee)
+        const displayFee = showQuarterly ? fee / 4 : fee;
+        return formatCurrency(displayFee)
     },
   },
   ] : []),
