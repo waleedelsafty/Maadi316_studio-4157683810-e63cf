@@ -19,6 +19,7 @@ import { InlineEditField } from '@/components/inline-edit-field';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { LevelFormSheet } from '@/components/level-form-sheet';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -45,7 +46,9 @@ export default function BuildingPage() {
     const [levelType, setLevelType] = useState<Level['type'] | ''>('');
     const [floorNumber, setFloorNumber] = useState<number | ''>('');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [isBuildingSheetOpen, setIsBuildingSheetOpen] = useState(false);
+    const [isLevelSheetOpen, setIsLevelSheetOpen] = useState(false);
+    const [editingLevel, setEditingLevel] = useState<Level | null>(null);
 
 
     const buildingRef = useMemo(() => {
@@ -231,6 +234,19 @@ export default function BuildingPage() {
         })
     }
 
+    const handleEditLevelClick = (level: Level) => {
+        setEditingLevel(level);
+        setIsLevelSheetOpen(true);
+    }
+    
+    const handleLevelSheetOpenChange = (isOpen: boolean) => {
+        setIsLevelSheetOpen(isOpen);
+        if (!isOpen) {
+            setEditingLevel(null);
+        }
+    }
+
+
     if (building && user && building.ownerId !== user.uid) {
         return (
             <div className="text-center">
@@ -259,7 +275,7 @@ export default function BuildingPage() {
                             <CardTitle>Building Information</CardTitle>
                             <CardDescription>View and edit the general details of your building.</CardDescription>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => setIsSheetOpen(true)}>
+                        <Button variant="outline" size="sm" onClick={() => setIsBuildingSheetOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" /> Edit Building
                         </Button>
                     </div>
@@ -410,7 +426,7 @@ export default function BuildingPage() {
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex gap-2 justify-end">
-                                                        <Button variant="outline" size="sm">Edit</Button>
+                                                        <Button variant="outline" size="sm" onClick={() => handleEditLevelClick(level)}>Edit</Button>
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild>
                                                                 <Button variant="destructive" size="sm">Delete</Button>
@@ -451,9 +467,19 @@ export default function BuildingPage() {
 
             <BuildingFormSheet
                 building={building}
-                isOpen={isSheetOpen}
-                onOpenChange={setIsSheetOpen}
+                isOpen={isBuildingSheetOpen}
+                onOpenChange={setIsBuildingSheetOpen}
             />
+
+            {editingLevel && (
+                <LevelFormSheet
+                    level={editingLevel}
+                    buildingId={buildingId}
+                    isOpen={isLevelSheetOpen}
+                    onOpenChange={handleLevelSheetOpenChange}
+                    existingLevels={levels || []}
+                />
+            )}
         </main>
     );
 }
