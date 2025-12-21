@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useUser } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp, query, orderBy, updateDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, query, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,11 +13,23 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level } from '@/types';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
+
+const levelTypeOrder: Record<Level['type'], number> = {
+    'Rooftop': 6,
+    'Penthouse': 5,
+    'Typical Floor': 4,
+    'Mezzanine': 3,
+    'Ground': 2,
+    'Basement': 1,
+};
+
 
 export default function BuildingPage() {
     const { buildingId } = useParams() as { buildingId: string };
@@ -25,9 +37,12 @@ export default function BuildingPage() {
     const user = useUser();
     const { toast } = useToast();
 
+    const [isAddingLevel, setIsAddingLevel] = useState(false);
     const [levelName, setLevelName] = useState('');
     const [levelType, setLevelType] = useState<Level['type'] | ''>('');
     const [floorNumber, setFloorNumber] = useState<number | ''>('');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
 
     const buildingRef = useMemo(() => {
         if (!firestore || !buildingId) return null;
@@ -38,13 +53,39 @@ export default function BuildingPage() {
 
     const levelsQuery = useMemo(() => {
         if (!firestore || !buildingId) return null;
-        return query(
-            collection(firestore, 'buildings', buildingId, 'levels'),
-            orderBy('createdAt', 'asc')
-        );
+        // We fetch without order, and sort on the client
+        return query(collection(firestore, 'buildings', buildingId, 'levels'));
     }, [firestore, buildingId]);
 
     const { data: levels } = useCollection(levelsQuery);
+    
+    const sortedLevels = useMemo(() => {
+        if (!levels) return [];
+        return [...levels].sort((a, b) => {
+            const typeA = levelTypeOrder[a.type];
+            const typeB = levelTypeOrder[b.type];
+
+            if (typeA !== typeB) {
+                return sortOrder === 'asc' ? typeA - typeB : typeB - typeA;
+            }
+
+            // If types are the same, apply secondary sorting
+            if (a.type === 'Typical Floor') {
+                 return sortOrder === 'asc' 
+                    ? (a.floorNumber || 0) - (b.floorNumber || 0) 
+                    : (b.floorNumber || 0) - (a.floorNumber || 0);
+            }
+             if (a.type === 'Basement') {
+                // For basements, a higher number is "lower" so we reverse the logic
+                 return sortOrder === 'asc' 
+                    ? a.name.localeCompare(b.name) * -1
+                    : b.name.localeCompare(a.name) * -1;
+            }
+            
+            return sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+        });
+    }, [levels, sortOrder]);
+
 
     const handleUpdateBuilding = async (field: keyof Building, value: string) => {
         if (!buildingRef) return;
@@ -83,7 +124,7 @@ export default function BuildingPage() {
             return;
         }
 
-        const newLevel: Omit<Level, 'id' | 'createdAt'> & { createdAt: any } = {
+        const newLevelData: Omit<Level, 'id' | 'createdAt'> & { createdAt: any } = {
             name: levelName,
             type: levelType,
             createdAt: serverTimestamp(),
@@ -92,11 +133,12 @@ export default function BuildingPage() {
 
         const levelsCollectionRef = collection(firestore, 'buildings', buildingId, 'levels');
         
-        addDoc(levelsCollectionRef, newLevel)
+        addDoc(levelsCollectionRef, newLevelData)
             .then(() => {
                 setLevelName('');
                 setLevelType('');
                 setFloorNumber('');
+                setIsAddingLevel(false);
                 toast({
                     title: 'Level Added',
                     description: `The level "${levelName}" has been added to the building.`,
@@ -106,12 +148,29 @@ export default function BuildingPage() {
                 errorEmitter.emit('permission-error', new FirestorePermissionError({
                     path: levelsCollectionRef.path,
                     operation: 'create',
-                    requestResourceData: newLevel,
+                    requestResourceData: newLevelData,
                 }));
             });
     };
     
-    // Security check
+    const handleDeleteLevel = (levelId: string) => {
+        if (!firestore || !buildingId) return;
+
+        const levelRef = doc(firestore, 'buildings', buildingId, 'levels', levelId);
+        
+        deleteDoc(levelRef).then(() => {
+            toast({
+                title: "Level Deleted",
+                description: "The level has been successfully removed.",
+            })
+        }).catch((serverError) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: levelRef.path,
+                operation: 'delete',
+            }));
+        })
+    }
+
     if (building && user && building.ownerId !== user.uid) {
         return (
             <div className="text-center">
@@ -163,46 +222,65 @@ export default function BuildingPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Building Levels</CardTitle>
-                    <CardDescription>Define the structure of your building by adding and managing its levels.</CardDescription>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Building Levels</CardTitle>
+                            <CardDescription>Define the structure of your building by adding and managing its levels.</CardDescription>
+                        </div>
+                         {!isAddingLevel && (
+                             <Button onClick={() => setIsAddingLevel(true)}>Add New Level</Button>
+                         )}
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <form onSubmit={handleAddLevel} className="space-y-4 p-4 border rounded-lg">
-                         <h3 className="font-medium">Add a New Level</h3>
-                        <div className="grid sm:grid-cols-3 gap-4">
-                            <Input
-                                placeholder="Level Name (e.g., 'Lobby')"
-                                value={levelName}
-                                onChange={(e) => setLevelName(e.target.value)}
-                                required
-                                className="sm:col-span-2"
-                            />
-                             <Select onValueChange={(value) => setLevelType(value as Level['type'])} value={levelType}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {levelTypes.map(type => (
-                                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        {levelType === 'Typical Floor' && (
-                            <Input
-                                type="number"
-                                placeholder="Floor Number (e.g., 1, 2, 3...)"
-                                value={floorNumber}
-                                onChange={(e) => setFloorNumber(Number(e.target.value))}
-                                required
-                            />
-                        )}
-                        <Button type="submit">Add Level</Button>
-                    </form>
+                    {isAddingLevel && (
+                        <form onSubmit={handleAddLevel} className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                            <h3 className="font-medium">Add a New Level</h3>
+                            <div className="grid sm:grid-cols-3 gap-4">
+                                <Input
+                                    placeholder="Level Name (e.g., 'Lobby')"
+                                    value={levelName}
+                                    onChange={(e) => setLevelName(e.target.value)}
+                                    required
+                                    className="sm:col-span-2"
+                                />
+                                <Select onValueChange={(value) => setLevelType(value as Level['type'])} value={levelType}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {levelTypes.map(type => (
+                                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {levelType === 'Typical Floor' && (
+                                <Input
+                                    type="number"
+                                    placeholder="Floor Number (e.g., 1, 2, 3...)"
+                                    value={floorNumber}
+                                    onChange={(e) => setFloorNumber(Number(e.target.value))}
+                                    required
+                                />
+                            )}
+                            <div className="flex gap-2">
+                                <Button type="submit">Save Level</Button>
+                                <Button variant="outline" onClick={() => setIsAddingLevel(false)}>Cancel</Button>
+                            </div>
+                        </form>
+                    )}
                     
                     <div className="space-y-4">
-                        {levels && levels.length > 0 ? (
-                            levels.map(level => (
+                         <div className="flex justify-end">
+                            <Button variant="outline" size="sm" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
+                                {sortOrder === 'asc' ? <ArrowUp className="mr-2 h-4 w-4" /> : <ArrowDown className="mr-2 h-4 w-4" />}
+                                Sort: {sortOrder === 'asc' ? 'Bottom-Up' : 'Top-Down'}
+                            </Button>
+                        </div>
+                        
+                        {sortedLevels && sortedLevels.length > 0 ? (
+                            sortedLevels.map(level => (
                                 <Card key={level.id}>
                                     <CardContent className="p-4 flex items-center justify-between">
                                         <div>
@@ -214,7 +292,26 @@ export default function BuildingPage() {
                                         </div>
                                          <div className="flex gap-2">
                                             <Button variant="outline" size="sm">Edit</Button>
-                                            <Button variant="destructive" size="sm">Delete</Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="destructive" size="sm">Delete</Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently delete the level
+                                                            "{level.name}" from your building.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteLevel(level.id)}>
+                                                            Continue
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </div>
                                     </CardContent>
                                 </Card>
