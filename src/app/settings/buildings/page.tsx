@@ -41,7 +41,7 @@ function BuildingRow({ building }: { building: Building }) {
     if (error) {
         return (
             <TableRow>
-                <TableCell colSpan={8} className="text-destructive text-center">
+                <TableCell colSpan={9} className="text-destructive text-center">
                     Could not load level data for {building.name}.
                 </TableCell>
             </TableRow>
@@ -55,6 +55,7 @@ function BuildingRow({ building }: { building: Building }) {
                     <Skeleton className="h-5 w-32" />
                 </TableCell>
                 <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
@@ -77,6 +78,9 @@ function BuildingRow({ building }: { building: Building }) {
             </TableCell>
             <TableCell className="text-center">
                 {levelInfo.hasGround && <CheckIcon className="mx-auto" />}
+            </TableCell>
+            <TableCell className="text-center">
+                {levelInfo.typicalFloorCount > 0 ? levelInfo.typicalFloorCount : '—'}
             </TableCell>
             <TableCell className="text-center">
                 {levelInfo.hasPenthouse && <CheckIcon className="mx-auto" />}
@@ -141,6 +145,7 @@ export default function BuildingsSettingsPage() {
                     <TableHead className="text-center">Basement</TableHead>
                     <TableHead className="text-center">Mezzanine</TableHead>
                     <TableHead className="text-center">Ground</TableHead>
+                    <TableHead className="text-center">Typical Floors</TableHead>
                     <TableHead className="text-center">Penthouse</TableHead>
                     <TableHead className="text-center">Rooftop</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
