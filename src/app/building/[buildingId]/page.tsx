@@ -13,13 +13,15 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown, CheckCircle2, XCircle, Edit } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LevelFormSheet } from '@/components/level-form-sheet';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -137,7 +139,7 @@ export default function BuildingPage() {
     }, [levels, sortOrder]);
 
 
-    const handleUpdateBuilding = async (field: keyof Building, value: string) => {
+    const handleUpdateBuilding = async (field: keyof Building, value: string | boolean) => {
         if (!buildingRef) return;
         try {
             await updateDoc(buildingRef, { [field]: value });
@@ -273,61 +275,63 @@ export default function BuildingPage() {
                     <div className="flex justify-between items-start">
                         <div>
                             <CardTitle>Building Information</CardTitle>
-                            <CardDescription>View and edit the general details of your building.</CardDescription>
+                            <CardDescription>View and manage the general details and structure of your building.</CardDescription>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => setIsBuildingSheetOpen(true)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Building
+                            <Edit className="mr-2 h-4 w-4" /> Edit Building Details
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                      {building ? (
                         <>
-                            <InlineEditField
-                                label="Building Name"
-                                value={building.name}
-                                onSave={(value) => handleUpdateBuilding('name', value)}
-                            />
-                             <InlineEditField
-                                label="Address"
-                                value={building.address}
-                                onSave={(value) => handleUpdateBuilding('address', value)}
-                            />
-                            <div className="grid grid-cols-2 gap-2 pt-2">
-                                <div className="flex items-center gap-2 rounded-md border p-2">
-                                    {building.hasBasement ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">Basement</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {building.hasBasement ? `Configured with ${building.basementCount} level(s)` : 'Not configured'}
-                                        </p>
+                           <div className="space-y-4">
+                                <InlineEditField
+                                    label="Building Name"
+                                    value={building.name}
+                                    onSave={(value) => handleUpdateBuilding('name', value)}
+                                />
+                                 <InlineEditField
+                                    label="Address"
+                                    value={building.address}
+                                    onSave={(value) => handleUpdateBuilding('address', value)}
+                                />
+                           </div>
+                            
+                            <div className="space-y-4 pt-4">
+                                <h4 className="font-medium">Building Structure</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                    <div className="flex items-center justify-between border-b pb-2">
+                                        <Label htmlFor="hasBasement" className="text-sm font-medium text-muted-foreground">Has Basement</Label>
+                                        <Switch
+                                            id="hasBasement"
+                                            checked={building.hasBasement}
+                                            onCheckedChange={(checked) => handleUpdateBuilding('hasBasement', checked)}
+                                        />
                                     </div>
-                                </div>
-                                 <div className="flex items-center gap-2 rounded-md border p-2">
-                                    {building.hasMezzanine ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">Mezzanine</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {building.hasMezzanine ? `Configured with ${building.mezzanineCount} level(s)` : 'Not configured'}
-                                        </p>
+                                    <div className="flex items-center justify-between border-b pb-2">
+                                        <Label htmlFor="hasMezzanine" className="text-sm font-medium text-muted-foreground">Has Mezzanine</Label>
+                                        <Switch
+                                            id="hasMezzanine"
+                                            checked={building.hasMezzanine}
+                                            onCheckedChange={(checked) => handleUpdateBuilding('hasMezzanine', checked)}
+                                        />
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-2 rounded-md border p-2">
-                                    {building.hasPenthouse ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">Penthouse</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {building.hasPenthouse ? 'Configured' : 'Not configured'}
-                                        </p>
+                                    <div className="flex items-center justify-between border-b pb-2">
+                                        <Label htmlFor="hasPenthouse" className="text-sm font-medium text-muted-foreground">Has Penthouse</Label>
+                                        <Switch
+                                            id="hasPenthouse"
+                                            checked={building.hasPenthouse}
+                                            onCheckedChange={(checked) => handleUpdateBuilding('hasPenthouse', checked)}
+                                        />
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-2 rounded-md border p-2">
-                                    {building.hasRooftop ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">Rooftop</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {building.hasRooftop ? 'Configured' : 'Not configured'}
-                                        </p>
+                                    <div className="flex items-center justify-between border-b pb-2">
+                                        <Label htmlFor="hasRooftop" className="text-sm font-medium text-muted-foreground">Has Usable Rooftop</Label>
+                                        <Switch
+                                            id="hasRooftop"
+                                            checked={building.hasRooftop}
+                                            onCheckedChange={(checked) => handleUpdateBuilding('hasRooftop', checked)}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -483,5 +487,3 @@ export default function BuildingPage() {
         </main>
     );
 }
-
-    
