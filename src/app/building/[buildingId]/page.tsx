@@ -26,7 +26,6 @@ import { Label } from '@/components/ui/label';
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
 const uniqueLevelTypes: Level['type'][] = ['Ground', 'Penthouse', 'Rooftop'];
-const unitTypes: Unit['type'][] = ['Office', 'Commercial', 'Flat Apartment', 'Duplex Apartment', 'Storage'];
 
 const levelTypeOrder: Record<Level['type'], number> = {
     'Rooftop': 6,
@@ -54,15 +53,6 @@ export default function BuildingPage() {
     const [isLevelSheetOpen, setIsLevelSheetOpen] = useState(false);
     const [editingLevel, setEditingLevel] = useState<Level | null>(null);
 
-    // State for Units
-    const [isAddingUnit, setIsAddingUnit] = useState(false);
-    const [unitNumber, setUnitNumber] = useState('');
-    const [unitLevelId, setUnitLevelId] = useState('');
-    const [unitSqm, setUnitSqm] = useState<number | ''>('');
-    const [unitMaintenance, setUnitMaintenance] = useState<number | ''>('');
-    const [unitOwnerName, setUnitOwnerName] = useState('');
-    const [unitType, setUnitType] = useState<Unit['type'] | ''>('');
-
     // State for common UI
     const [isBuildingSheetOpen, setIsBuildingSheetOpen] = useState(false);
     
@@ -80,21 +70,6 @@ export default function BuildingPage() {
     }, [firestore, buildingId]);
 
     const { data: levels } = useCollection(levelsQuery);
-    
-    const unitsQuery = useMemo(() => {
-        if (!firestore || !buildingId) return null;
-        return query(collection(firestore, 'buildings', buildingId, 'units'));
-    }, [firestore, buildingId]);
-    
-    const { data: units } = useCollection(unitsQuery);
-
-    const levelsById = useMemo(() => {
-        if (!levels) return {};
-        return levels.reduce((acc, level) => {
-            acc[level.id] = level;
-            return acc;
-        }, {} as Record<string, Level>);
-    }, [levels]);
 
     const availableLevelTypes = useMemo(() => {
         if (!levels || !building) return levelTypes;
@@ -221,41 +196,11 @@ export default function BuildingPage() {
             errorEmitter.emit('permission-error', new FirestorePermissionError({ path: levelRef.path, operation: 'delete' }));
         })
     }
-
-    const handleEditLevelClick = (level: Level) => {
-        setEditingLevel(level); setIsLevelSheetOpen(true);
-    }
     
     const handleLevelSheetOpenChange = (isOpen: boolean) => {
         setIsLevelSheetOpen(isOpen);
         if (!isOpen) setEditingLevel(null);
     }
-
-    const handleAddUnit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!unitNumber.trim() || !unitLevelId || unitSqm === '' || unitMaintenance === '' || !unitOwnerName.trim() || !unitType || !firestore || !buildingId) {
-            toast({ variant: 'destructive', title: 'Missing fields', description: 'Please fill out all unit details.' });
-            return;
-        }
-
-        const newUnitData: Omit<Unit, 'id' | 'createdAt'> & { createdAt: any } = {
-            unitNumber, levelId: unitLevelId, sqm: Number(unitSqm), quarterlyMaintenanceFees: Number(unitMaintenance),
-            ownerName: unitOwnerName, type: unitType, createdAt: serverTimestamp(),
-        };
-
-        const unitsCollectionRef = collection(firestore, 'buildings', buildingId, 'units');
-        addDoc(unitsCollectionRef, newUnitData)
-            .then(() => {
-                setUnitNumber(''); setUnitLevelId(''); setUnitSqm(''); setUnitMaintenance(''); setUnitOwnerName(''); setUnitType('');
-                setIsAddingUnit(false);
-                toast({ title: 'Unit Added', description: `Unit "${unitNumber}" has been added.` });
-            })
-            .catch((serverError) => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: unitsCollectionRef.path, operation: 'create', requestResourceData: newUnitData,
-                }));
-            });
-    };
 
     if (building && user && building.ownerId !== user.uid) {
         return (
@@ -401,13 +346,15 @@ export default function BuildingPage() {
                                                 <TableCell>{level.type}{level.type === 'Typical Floor' && ` - Floor ${level.floorNumber}`}</TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex gap-2 justify-end">
-                                                        <Button variant="outline" size="sm" onClick={() => handleEditLevelClick(level)}>Edit</Button>
+                                                        <Button variant="outline" size="sm" asChild>
+                                                          <Link href={`/building/${buildingId}/level/${level.id}`}>Edit</Link>
+                                                        </Button>
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild><Button variant="destructive" size="sm">Delete</Button></AlertDialogTrigger>
                                                             <AlertDialogContent>
                                                                 <AlertDialogHeader>
                                                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>This will permanently delete the level "{level.name}".</AlertDialogDescription>
+                                                                    <AlertDialogDescription>This will permanently delete the level "{level.name}". All units on this level will also be deleted.</AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -427,86 +374,6 @@ export default function BuildingPage() {
                 </CardContent>
             </Card>
 
-            <Card>
-                 <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>Building Units</CardTitle>
-                            <CardDescription>Add and manage the individual units within the building.</CardDescription>
-                        </div>
-                         {!isAddingUnit && ( <Button onClick={() => setIsAddingUnit(true)} disabled={!levels || levels.length === 0}>Add New Unit</Button> )}
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {isAddingUnit && (
-                        <form onSubmit={handleAddUnit} className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                            <h3 className="font-medium">Add a New Unit</h3>
-                            <div className="grid sm:grid-cols-3 gap-4">
-                                <Input placeholder="Unit Number (e.g., '101', 'G-02')" value={unitNumber} onChange={(e) => setUnitNumber(e.target.value)} required />
-                                <Select onValueChange={setUnitLevelId} value={unitLevelId}>
-                                    <SelectTrigger><SelectValue placeholder="Select Floor" /></SelectTrigger>
-                                    <SelectContent>{sortedLevels.map(level => (<SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>))}</SelectContent>
-                                </Select>
-                                 <Select onValueChange={(value) => setUnitType(value as Unit['type'])} value={unitType}>
-                                    <SelectTrigger><SelectValue placeholder="Select Unit Type" /></SelectTrigger>
-                                    <SelectContent>{unitTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid sm:grid-cols-3 gap-4">
-                               <Input type="number" placeholder="Size (sqm)" value={unitSqm} onChange={e => setUnitSqm(Number(e.target.value))} required/>
-                               <Input type="number" placeholder="Quarterly Maintenance" value={unitMaintenance} onChange={e => setUnitMaintenance(Number(e.target.value))} required/>
-                               <Input placeholder="Owner's Name" value={unitOwnerName} onChange={(e) => setUnitOwnerName(e.target.value)} required />
-                            </div>
-                            <div className="flex gap-2">
-                                <Button type="submit">Save Unit</Button>
-                                <Button variant="outline" onClick={() => setIsAddingUnit(false)}>Cancel</Button>
-                            </div>
-                        </form>
-                    )}
-
-                    <div className="space-y-4">
-                        {units && units.length > 0 ? (
-                             <div className="border rounded-lg">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Unit #</TableHead>
-                                            <TableHead>Floor</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Size (sqm)</TableHead>
-                                            <TableHead>Owner</TableHead>
-                                            <TableHead>Maint. Fee</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {units.map((unit) => (
-                                            <TableRow key={unit.id}>
-                                                <TableCell className="font-semibold">{unit.unitNumber}</TableCell>
-                                                <TableCell>{levelsById[unit.levelId]?.name || 'N/A'}</TableCell>
-                                                <TableCell>{unit.type}</TableCell>
-                                                <TableCell>{unit.sqm}</TableCell>
-                                                <TableCell>{unit.ownerName}</TableCell>
-                                                <TableCell>{unit.quarterlyMaintenanceFees}</TableCell>
-                                                <TableCell className="text-right">
-                                                    {/* Actions placeholder */}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        ) : (
-                            <div className="text-center py-12 rounded-lg border border-dashed">
-                                <p className="text-muted-foreground">
-                                    {(!levels || levels.length === 0) ? "Please add a level before adding units." : "No units have been added yet."}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-
             <BuildingFormSheet building={building} isOpen={isBuildingSheetOpen} onOpenChange={setIsBuildingSheetOpen} />
 
             {editingLevel && (
@@ -515,3 +382,5 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    

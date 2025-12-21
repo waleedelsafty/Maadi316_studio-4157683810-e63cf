@@ -63,7 +63,12 @@ export function MainNav({ children }: { children: React.ReactNode }) {
 
   const getPageTitle = () => {
     if (pathname === '/') return 'Home';
-    if (pathname.startsWith('/building')) return 'Building Details';
+    if (pathname.startsWith('/building/')) {
+        if (pathname.includes('/level/')) {
+            return 'Level Details';
+        }
+        return 'Building Details';
+    }
     if (pathname === '/settings/general') return 'General Settings';
     if (pathname === '/settings/buildings') return 'Manage Buildings';
     if (pathname.startsWith('/settings')) return 'Settings';
@@ -164,3 +169,5 @@ export function MainNav({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    
