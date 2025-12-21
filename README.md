@@ -1,6 +1,6 @@
 # Building Management App
 
-This is a Next.js application built with Firebase Studio for managing building information, including structural levels.
+This is a Next.js application built with Firebase Studio for managing building information, including structural levels and units.
 
 ---
 
@@ -13,6 +13,12 @@ This is a Next.js application built with Firebase Studio for managing building i
 ---
 
 ## Version History
+
+### v0.1.5
+- **Unit Management**: Added the ability to create, view, and delete individual units (e.g., offices, apartments) within each building level.
+- **Dedicated Level Page**: Refactored the UI to give each building level its own dedicated page, which now serves as the central place to manage that level's details and its associated units.
+- **Enhanced Building Dashboard**: The homepage dashboard card has been significantly improved to show a summary of units by type, a total unit count, and a list of levels with a unit count for each.
+- **Unit Counts in Lists**: The levels table on the building detail page now also includes a column showing the number of units on each floor, providing a better at-a-glance overview.
 
 ### v0.1.4
 - **Direct Editing UI**: Replaced static building details with interactive Switch and Select components on the building detail page, allowing for direct, inline modification of properties like `hasBasement`, `basementCount`, `hasPenthouse`, etc., without needing a separate edit form.
