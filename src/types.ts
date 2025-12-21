@@ -8,3 +8,11 @@ export type Building = {
     floors: number;
     units: number;
 };
+
+export type Level = {
+    id: string;
+    name: string;
+    type: 'Basement' | 'Ground' | 'Mezzanine' | 'Typical Floor' | 'Penthouse' | 'Rooftop';
+    floorNumber?: number;
+    createdAt: any; // Firestore Timestamp
+};

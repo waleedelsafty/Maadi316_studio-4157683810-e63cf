@@ -19,6 +19,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { EditBuildingSheet } from '@/components/edit-building-sheet';
 import type { Building } from '@/types';
+import Link from 'next/link';
 
 export default function HomePage() {
   const user = useUser();
@@ -94,7 +95,9 @@ export default function HomePage() {
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => setEditingBuilding(building as Building)}>Edit</Button>
-                      <Button size="sm">Open</Button>
+                      <Button size="sm" asChild>
+                        <Link href={`/building/${building.id}`}>Open</Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

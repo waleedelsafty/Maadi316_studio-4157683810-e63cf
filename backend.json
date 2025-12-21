@@ -73,6 +73,32 @@
         }
       },
       "required": ["name", "address", "ownerId", "createdAt"]
+    },
+    "Level": {
+      "title": "Level",
+      "description": "Represents a floor or level within a building.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The custom name of the level (e.g., 'Lobby', 'Parking 1')."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of the level.",
+          "enum": ["Basement", "Ground", "Mezzanine", "Typical Floor", "Penthouse", "Rooftop"]
+        },
+        "floorNumber": {
+          "type": "number",
+          "description": "The designated number for the floor, used for 'Typical Floor' type."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the level was created."
+        }
+      },
+      "required": ["name", "type", "createdAt"]
     }
   },
   "auth": {
@@ -96,6 +122,12 @@
         "$ref": "#/backend/entities/Building"
       },
       "description": "Stores building information."
+    },
+    "/buildings/{buildingId}/levels/{levelId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Level"
+      },
+      "description": "Stores the levels within a specific building."
     }
   }
 }
