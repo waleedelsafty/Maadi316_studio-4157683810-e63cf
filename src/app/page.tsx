@@ -2,37 +2,19 @@
 'use client';
 
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   collection,
-  addDoc,
-  serverTimestamp,
   query,
   where,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
-import type { Building } from '@/types';
+import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 
 export default function HomePage() {
   const user = useUser();
   const firestore = useFirestore();
-  const [noteText, setNoteText] = useState('');
-  const { toast } = useToast();
-
-  const notesQuery = useMemo(() => {
-    if (!user || !firestore) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'notes'),
-    );
-  }, [user, firestore]);
-
-  const { data: notes } = useCollection(notesQuery);
 
   const buildingsQuery = useMemo(() => {
     if (!user || !firestore) return null;
@@ -44,32 +26,6 @@ export default function HomePage() {
 
   const { data: buildings } = useCollection(buildingsQuery);
 
-  const handleAddNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!noteText.trim() || !user || !firestore) return;
-
-    const newNote = {
-      text: noteText,
-      createdAt: serverTimestamp(),
-    };
-
-    const notesCollectionRef = collection(firestore, 'users', user.uid, 'notes');
-    addDoc(notesCollectionRef, newNote)
-      .then(() => {
-        setNoteText('');
-        toast({
-          title: 'Note added!',
-          description: 'Your new note has been saved.',
-        });
-      })
-      .catch((serverError) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: notesCollectionRef.path,
-          operation: 'create',
-          requestResourceData: newNote,
-        }));
-      });
-  };
 
   if (!user || !firestore) {
     // AuthProvider handles the redirect, so we can just show a loader or null
@@ -108,43 +64,6 @@ export default function HomePage() {
               </div>
             )}
           </div>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Add a New Note</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAddNote} className="flex gap-4">
-              <Input
-                type="text"
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="What's on your mind?"
-                className="flex-grow"
-              />
-              <Button type="submit">Add Note</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold mb-4">Your Notes</h2>
-          {notes && notes.length > 0 ? (
-            notes.map((note) => (
-              <Card key={note.id}>
-                <CardContent className="p-6">
-                  <p>{note.text}</p>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">
-                You haven't added any notes yet.
-              </p>
-            </div>
-          )}
         </div>
     </main>
   );
