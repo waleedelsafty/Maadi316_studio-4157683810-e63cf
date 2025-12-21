@@ -7,14 +7,14 @@ import { calculateAreaShares, calculateFees } from '@/lib/logic';
 
 interface AppContextType {
   units: Unit[];
-  settings: BuildingSettings;
+  settings: BuildingSettings | null;
   loading: boolean;
   updateSettings: (newSettings: Partial<BuildingSettings>) => void;
   recalculateFees: (newBudgetOrRate: number) => void;
   getUnitByCode: (code: string) => Unit | undefined;
 }
 
-const defaultSettings: BuildingSettings = {
+const initialSettingsData: Omit<BuildingSettings, 'financials'> & { financials: Omit<BuildingSettings['financials'], 'last_recalculation_date'> } = {
   commonAreas: {
     global_amenities_sqm: 600.0,
     floor_standard_sqm: 80.0,
@@ -27,7 +27,6 @@ const defaultSettings: BuildingSettings = {
       Shop: 2.0,
       Office: 1.25,
     },
-    last_recalculation_date: new Date().toISOString(),
   },
 };
 
@@ -35,9 +34,9 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [units, setUnits] = useState<Unit[]>([]);
-  const [settings, setSettings] = useState<BuildingSettings>(defaultSettings);
+  const [settings, setSettings] = useState<BuildingSettings | null>(null);
   const [loading, setLoading] = useState(true);
-
+  
   const performRecalculation = useCallback((currentUnits: Unit[], currentSettings: BuildingSettings): Unit[] => {
     // 1. Map initial raw data to Unit structure, preserving existing units if needed.
     // This simple implementation re-maps every time.
@@ -64,17 +63,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return processedUnits;
   }, []);
 
+  useEffect(() => {
+    // Defer date initialization to the client side to prevent hydration errors
+    const clientSideSettings: BuildingSettings = {
+        ...initialSettingsData,
+        financials: {
+            ...initialSettingsData.financials,
+            last_recalculation_date: new Date().toISOString(),
+        }
+    };
+    setSettings(clientSideSettings);
+  }, []);
+
 
   useEffect(() => {
-    setLoading(true);
-    const initialCalculatedUnits = performRecalculation(units, defaultSettings);
-    setUnits(initialCalculatedUnits);
-    setSettings(defaultSettings);
-    setLoading(false);
+    if (settings) {
+        setLoading(true);
+        const initialCalculatedUnits = performRecalculation(units, settings);
+        setUnits(initialCalculatedUnits);
+        setLoading(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [performRecalculation]);
+  }, [settings, performRecalculation]);
 
   const updateSettings = (newSettingsPartial: Partial<BuildingSettings>) => {
+    if (!settings) return;
     setLoading(true);
     const newSettings: BuildingSettings = {
         ...settings,
@@ -90,12 +103,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     };
     setSettings(newSettings);
-    const updatedUnits = performRecalculation(units, newSettings);
-    setUnits(updatedUnits);
-    setLoading(false);
+    // Recalculation will be triggered by the useEffect that watches 'settings'
   };
   
   const recalculateFees = (newBudgetOrRate: number) => {
+    if (!settings) return;
     setLoading(true);
     const newFinancials = { ...settings.financials, last_recalculation_date: new Date().toISOString() };
     if (settings.financials.calculation_method === 'budget_based') {
@@ -109,6 +121,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         financials: newFinancials,
     };
     setSettings(newSettings);
+    // In this specific case, we can run just the fee calc for a small optimization.
+    // The main useEffect will still run, but this provides a quicker update.
     const updatedUnits = calculateFees(units, newSettings);
     setUnits(updatedUnits);
     setLoading(false);

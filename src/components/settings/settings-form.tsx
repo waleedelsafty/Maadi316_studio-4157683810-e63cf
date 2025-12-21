@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -29,8 +28,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Skeleton } from "../ui/skeleton";
+import { Label } from "../ui/label";
 
 const settingsSchema = z.object({
     global_amenities_sqm: z.coerce.number().min(0, "Must be a positive number."),
@@ -48,16 +48,23 @@ export function SettingsForm() {
 
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
-    values: {
-      global_amenities_sqm: settings.commonAreas.global_amenities_sqm,
-      floor_standard_sqm: settings.commonAreas.floor_standard_sqm,
-      Shop: settings.financials.type_multipliers.Shop,
-      Office: settings.financials.type_multipliers.Office,
-      calculation_method: settings.financials.calculation_method,
-      current_annual_budget: settings.financials.current_annual_budget,
-      rate_per_sqm: settings.financials.rate_per_sqm,
-    },
+    // Use `useEffect` to update form values when settings are loaded
   });
+
+  React.useEffect(() => {
+    if (settings) {
+        form.reset({
+            global_amenities_sqm: settings.commonAreas.global_amenities_sqm,
+            floor_standard_sqm: settings.commonAreas.floor_standard_sqm,
+            Shop: settings.financials.type_multipliers.Shop,
+            Office: settings.financials.type_multipliers.Office,
+            calculation_method: settings.financials.calculation_method,
+            current_annual_budget: settings.financials.current_annual_budget,
+            rate_per_sqm: settings.financials.rate_per_sqm,
+        });
+    }
+  }, [settings, form]);
+
 
   const watchCalculationMethod = form.watch("calculation_method");
 
@@ -81,6 +88,43 @@ export function SettingsForm() {
       title: "Settings Updated",
       description: "Building settings have been saved and all fees recalculated.",
     });
+  }
+  
+  if (loading || !settings) {
+    return (
+        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+            <Card className="xl:col-span-1">
+                <CardHeader>
+                    <Skeleton className="h-6 w-1/2" />
+                    <Skeleton className="h-4 w-3/4" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </CardContent>
+            </Card>
+            <Card className="xl:col-span-1">
+                <CardHeader>
+                    <Skeleton className="h-6 w-1/2" />
+                    <Skeleton className="h-4 w-3/4" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </CardContent>
+            </Card>
+            <Card className="xl:col-span-1">
+                <CardHeader>
+                    <Skeleton className="h-6 w-1/2" />
+                    <Skeleton className="h-4 w-3/4" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </CardContent>
+            </Card>
+        </div>
+    )
   }
 
   return (
