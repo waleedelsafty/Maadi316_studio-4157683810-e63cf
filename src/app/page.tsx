@@ -2,15 +2,20 @@
 'use client';
 
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BuildingInfoCard } from '@/components/building-info-card';
 import type { Building } from '@/types';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 export default function HomePage() {
   const user = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
 
   const buildingsQuery = useMemo(() => {
@@ -19,6 +24,15 @@ export default function HomePage() {
   }, [user, firestore]);
 
   const { data: buildings } = useCollection(buildingsQuery);
+  
+  useEffect(() => {
+    const buildingIdFromUrl = searchParams.get('building');
+    if (buildingIdFromUrl) {
+      setSelectedBuildingId(buildingIdFromUrl);
+    } else {
+      setSelectedBuildingId(null);
+    }
+  }, [searchParams]);
 
   const selectedBuilding = useMemo(() => {
     if (!buildings || !selectedBuildingId) return null;
@@ -27,6 +41,9 @@ export default function HomePage() {
   
   const handleBuildingSelect = (buildingId: string) => {
     setSelectedBuildingId(buildingId);
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    newSearchParams.set('building', buildingId);
+    router.push(`${pathname}?${newSearchParams.toString()}`);
   }
 
   if (!user || !firestore) {
