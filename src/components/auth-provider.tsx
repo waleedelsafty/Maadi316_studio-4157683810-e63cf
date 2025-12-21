@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { app } from "@/lib/firebase/config";
-import { getAuth, onAuthStateChanged, User, getRedirectResult } from "firebase/auth";
+import { app } from '@/lib/firebase/config';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, {
   createContext,
   useContext,
   useEffect,
   useMemo,
   useState,
-} from "react";
+} from 'react';
 
 export const AuthContext = createContext<{ user: User | null }>({
   user: null,
@@ -19,23 +19,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const auth = getAuth(app);
 
   useEffect(() => {
-    // This handles the result from the redirect
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          // This is the signed-in user
-          setUser(result.user);
-        }
-      })
-      .catch((error) => {
-        console.error("Error getting redirect result", error);
-      });
-
-    // This listens for any future auth state changes
+    // onAuthStateChanged is the recommended way to get the current user.
+    // It automatically handles the result of a redirect login when the page loads.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
     });
 
+    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [auth]);
 
