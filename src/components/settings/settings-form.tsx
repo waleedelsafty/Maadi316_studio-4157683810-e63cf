@@ -18,6 +18,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useApp } from "@/hooks/use-app";
 import { useToast } from "@/hooks/use-toast";
 import { RecalculateFeesDialog } from "./recalculate-fees-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Label } from "../ui/label";
+import { useState, useMemo } from "react";
+import { formatCurrency } from "@/lib/utils";
+
 
 const formSchema = z.object({
   global_amenities_sqm: z.coerce.number().min(0, "Must be a positive number."),
@@ -27,8 +42,12 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function SettingsForm() {
-  const { settings, updateSettings, loading } = useApp();
+  const { settings, updateSettings, loading, recalculateFees } = useApp();
   const { toast } = useToast();
+  const [quarterlyExpenses, setQuarterlyExpenses] = useState(settings.financials.current_annual_budget / 4);
+
+  const newAnnualBudget = useMemo(() => quarterlyExpenses * 4, [quarterlyExpenses]);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -52,6 +71,14 @@ export function SettingsForm() {
       description: "Building settings have been saved and all unit areas recalculated.",
     });
   }
+  
+  const handleRecalculate = () => {
+    recalculateFees(newAnnualBudget);
+    toast({
+      title: "Fees Recalculated",
+      description: `All unit fees have been updated based on the new annual budget of ${newAnnualBudget.toLocaleString()}.`,
+    });
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -116,10 +143,43 @@ export function SettingsForm() {
         <CardContent className="space-y-4">
             <div>
                 <h4 className="font-medium">Current Annual Budget</h4>
-                <p className="text-2xl font-bold font-mono text-primary">{settings.financials.current_annual_budget.toLocaleString("en-US", { style: "currency", currency: "EGP" })}</p>
+                <p className="text-2xl font-bold font-mono text-primary">{formatCurrency(settings.financials.current_annual_budget)}</p>
                 <p className="text-xs text-muted-foreground">Last Recalculation: {new Date(settings.financials.last_recalculation_date).toLocaleDateString()}</p>
             </div>
-            <RecalculateFeesDialog currentBudget={settings.financials.current_annual_budget} />
+            
+            <div className="space-y-2">
+                <Label htmlFor="quarterly-expenses">Estimated Quarterly Expenses (EGP)</Label>
+                <Input 
+                    id="quarterly-expenses"
+                    type="number"
+                    value={quarterlyExpenses}
+                    onChange={(e) => setQuarterlyExpenses(Number(e.target.value))}
+                    placeholder="e.g. 250000"
+                />
+                <p className="text-sm text-muted-foreground">
+                    This will be multiplied by 4 to set the new annual budget to: <span className="font-medium text-primary">{formatCurrency(newAnnualBudget)}</span>
+                </p>
+            </div>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={newAnnualBudget <= 0}>Recalculate All Fees</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm Fee Recalculation</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will recalculate fees for all billable units based on a new annual budget of <span className="font-bold">{formatCurrency(newAnnualBudget)}</span>. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleRecalculate} disabled={loading}>
+                    {loading ? "Calculating..." : "Yes, Recalculate"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
         </CardContent>
       </Card>
     </div>
