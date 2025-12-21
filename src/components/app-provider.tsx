@@ -37,16 +37,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<BuildingSettings | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const performRecalculation = useCallback((currentUnits: Unit[], currentSettings: BuildingSettings): Unit[] => {
-    // 1. Map initial raw data to Unit structure, preserving existing units if needed.
-    // This simple implementation re-maps every time.
+  const performFullRecalculation = useCallback((currentSettings: BuildingSettings): Unit[] => {
     const mappedUnits: Unit[] = initialUnitsData.map(u => ({
       ...u,
       net_sqm: u.sqm,
       billing_parent_code: u.parent,
-      // The factor from raw data is now a multiplier in settings, not on the unit itself
       type_factor: currentSettings.financials.type_multipliers[u.type as keyof typeof currentSettings.financials.type_multipliers] || 1.0,
-      // Initialize calculated fields
       share_local_common: 0,
       share_global_common: 0,
       total_gross_sqm: 0,
@@ -54,17 +50,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       current_maintenance_fee: 0,
     } as Unit));
 
-    // 2. Run Algorithm A (Area Calculation)
     let processedUnits = calculateAreaShares(mappedUnits, currentSettings);
-
-    // 3. Run Algorithm B (Fee Calculation)
     processedUnits = calculateFees(processedUnits, currentSettings);
     
     return processedUnits;
   }, []);
 
   useEffect(() => {
-    // Defer date initialization to the client side to prevent hydration errors
+    // Defer initialization to the client side to prevent hydration errors.
+    // This ensures that `new Date()` is only called on the client.
     const clientSideSettings: BuildingSettings = {
         ...initialSettingsData,
         financials: {
@@ -77,55 +71,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
+    // This effect now only runs when `settings` is first initialized on the client,
+    // or when it's updated by user actions.
     if (settings) {
         setLoading(true);
-        const initialCalculatedUnits = performRecalculation(units, settings);
-        setUnits(initialCalculatedUnits);
+        const calculatedUnits = performFullRecalculation(settings);
+        setUnits(calculatedUnits);
         setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, performRecalculation]);
+  }, [settings, performFullRecalculation]);
 
   const updateSettings = (newSettingsPartial: Partial<BuildingSettings>) => {
-    if (!settings) return;
-    setLoading(true);
-    const newSettings: BuildingSettings = {
-        ...settings,
-        ...newSettingsPartial,
-        commonAreas: {
-            ...settings.commonAreas,
-            ...newSettingsPartial.commonAreas,
-        },
-        financials: {
-            ...settings.financials,
-            ...newSettingsPartial.financials,
-            last_recalculation_date: new Date().toISOString(),
-        }
-    };
-    setSettings(newSettings);
-    // Recalculation will be triggered by the useEffect that watches 'settings'
+    setSettings(prevSettings => {
+        if (!prevSettings) return null;
+        const newSettings: BuildingSettings = {
+            ...prevSettings,
+            ...newSettingsPartial,
+            commonAreas: {
+                ...prevSettings.commonAreas,
+                ...newSettingsPartial.commonAreas,
+            },
+            financials: {
+                ...prevSettings.financials,
+                ...newSettingsPartial.financials,
+                last_recalculation_date: new Date().toISOString(),
+            }
+        };
+        return newSettings;
+    });
   };
   
   const recalculateFees = (newBudgetOrRate: number) => {
-    if (!settings) return;
-    setLoading(true);
-    const newFinancials = { ...settings.financials, last_recalculation_date: new Date().toISOString() };
-    if (settings.financials.calculation_method === 'budget_based') {
-        newFinancials.current_annual_budget = newBudgetOrRate;
-    } else {
-        newFinancials.rate_per_sqm = newBudgetOrRate;
-    }
-
-    const newSettings: BuildingSettings = {
-        ...settings,
-        financials: newFinancials,
-    };
-    setSettings(newSettings);
-    // In this specific case, we can run just the fee calc for a small optimization.
-    // The main useEffect will still run, but this provides a quicker update.
-    const updatedUnits = calculateFees(units, newSettings);
-    setUnits(updatedUnits);
-    setLoading(false);
+     updateSettings({
+        financials: {
+            ...(settings?.financials ?? initialSettingsData.financials),
+            calculation_method: settings?.financials.calculation_method === 'budget_based' ? 'budget_based' : 'rate_based',
+            current_annual_budget: settings?.financials.calculation_method === 'budget_based' ? newBudgetOrRate : settings!.financials.current_annual_budget,
+            rate_per_sqm: settings?.financials.calculation_method === 'rate_based' ? newBudgetOrRate : settings!.financials.rate_per_sqm,
+        }
+    });
   };
 
   const getUnitByCode = (code: string) => {
