@@ -13,9 +13,10 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, CheckCircle2, XCircle, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
+import { BuildingFormSheet } from '@/components/building-form-sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
@@ -43,6 +44,7 @@ export default function BuildingPage() {
     const [levelType, setLevelType] = useState<Level['type'] | ''>('');
     const [floorNumber, setFloorNumber] = useState<number | ''>('');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
 
 
     const buildingRef = useMemo(() => {
@@ -238,10 +240,17 @@ export default function BuildingPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Building Information</CardTitle>
-                    <CardDescription>View and edit the general details of your building.</CardDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Building Information</CardTitle>
+                            <CardDescription>View and edit the general details of your building.</CardDescription>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => setIsSheetOpen(true)}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit Building
+                        </Button>
+                    </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-6">
                      {building ? (
                         <>
                             <InlineEditField
@@ -254,11 +263,35 @@ export default function BuildingPage() {
                                 value={building.address}
                                 onSave={(value) => handleUpdateBuilding('address', value)}
                             />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                                <div className="flex items-center gap-2 rounded-md border p-3">
+                                    {building.hasBasement ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium">Basement</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {building.hasBasement ? `Configured with ${building.basementCount} level(s)` : 'Not configured'}
+                                        </p>
+                                    </div>
+                                </div>
+                                 <div className="flex items-center gap-2 rounded-md border p-3">
+                                    {building.hasMezzanine ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium">Mezzanine</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {building.hasMezzanine ? `Configured with ${building.mezzanineCount} level(s)` : 'Not configured'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </>
                     ) : (
                         <>
                             <div className="h-8 w-1/2 bg-muted rounded animate-pulse" />
                             <div className="h-8 w-2/3 bg-muted rounded animate-pulse" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                                <div className="h-12 bg-muted rounded animate-pulse" />
+                                <div className="h-12 bg-muted rounded animate-pulse" />
+                            </div>
                         </>
                     )}
                 </CardContent>
@@ -370,6 +403,13 @@ export default function BuildingPage() {
                      </div>
                 </CardContent>
             </Card>
+
+            <BuildingFormSheet
+                building={building}
+                isOpen={isSheetOpen}
+                onOpenChange={setIsSheetOpen}
+            />
         </main>
     );
-}
+
+    
