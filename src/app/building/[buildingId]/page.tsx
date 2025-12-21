@@ -61,19 +61,34 @@ export default function BuildingPage() {
     const { data: levels } = useCollection(levelsQuery);
 
     const availableLevelTypes = useMemo(() => {
-        if (!levels) return levelTypes;
+        if (!levels || !building) return levelTypes;
 
+        // Filter out unique types that already exist
         const existingUniqueTypes = new Set(levels.filter(level => uniqueLevelTypes.includes(level.type)).map(level => level.type));
-        
         let filteredTypes = levelTypes.filter(type => !existingUniqueTypes.has(type));
 
-        const mezzanineCount = levels.filter(level => level.type === 'Mezzanine').length;
-        if (mezzanineCount >= 2) {
+        // Handle Basement logic
+        if (building.hasBasement) {
+            const basementCount = levels.filter(level => level.type === 'Basement').length;
+            if (basementCount >= (building.basementCount || 0)) {
+                filteredTypes = filteredTypes.filter(type => type !== 'Basement');
+            }
+        } else {
+            filteredTypes = filteredTypes.filter(type => type !== 'Basement');
+        }
+
+        // Handle Mezzanine logic
+        if (building.hasMezzanine) {
+            const mezzanineCount = levels.filter(level => level.type === 'Mezzanine').length;
+            if (mezzanineCount >= (building.mezzanineCount || 0)) {
+                filteredTypes = filteredTypes.filter(type => type !== 'Mezzanine');
+            }
+        } else {
             filteredTypes = filteredTypes.filter(type => type !== 'Mezzanine');
         }
 
         return filteredTypes;
-    }, [levels]);
+    }, [levels, building]);
     
     const sortedLevels = useMemo(() => {
         if (!levels) return [];

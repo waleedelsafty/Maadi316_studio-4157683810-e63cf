@@ -7,6 +7,10 @@ export type Building = {
     createdAt: any; // Firestore Timestamp
     floors: number;
     units: number;
+    hasBasement?: boolean;
+    basementCount?: number;
+    hasMezzanine?: boolean;
+    mezzanineCount?: number;
 };
 
 export type Level = {

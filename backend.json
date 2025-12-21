@@ -70,6 +70,22 @@
         "units": {
           "type": "number",
           "description": "The total number of units in the building."
+        },
+        "hasBasement": {
+          "type": "boolean",
+          "description": "Indicates if the building has a basement."
+        },
+        "basementCount": {
+          "type": "number",
+          "description": "The number of basement levels (1-3)."
+        },
+        "hasMezzanine": {
+          "type": "boolean",
+          "description": "Indicates if the building has a mezzanine."
+        },
+        "mezzanineCount": {
+          "type": "number",
+          "description": "The number of mezzanine levels (1-4)."
         }
       },
       "required": ["name", "address", "ownerId", "createdAt"]
