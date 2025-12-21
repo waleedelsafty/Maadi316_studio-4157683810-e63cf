@@ -64,11 +64,14 @@ export default function BuildingPage() {
 
     const availableLevelTypes = useMemo(() => {
         if (!levels || !building) return levelTypes;
-
+    
+        // Start with all level types
+        let filteredTypes = [...levelTypes];
+    
         // Filter out unique types that already exist
         const existingUniqueTypes = new Set(levels.filter(level => uniqueLevelTypes.includes(level.type)).map(level => level.type));
-        let filteredTypes = levelTypes.filter(type => !existingUniqueTypes.has(type));
-
+        filteredTypes = filteredTypes.filter(type => !existingUniqueTypes.has(type));
+    
         // Handle Basement logic
         if (building.hasBasement) {
             const basementCount = levels.filter(level => level.type === 'Basement').length;
@@ -78,7 +81,7 @@ export default function BuildingPage() {
         } else {
             filteredTypes = filteredTypes.filter(type => type !== 'Basement');
         }
-
+    
         // Handle Mezzanine logic
         if (building.hasMezzanine) {
             const mezzanineCount = levels.filter(level => level.type === 'Mezzanine').length;
@@ -87,6 +90,16 @@ export default function BuildingPage() {
             }
         } else {
             filteredTypes = filteredTypes.filter(type => type !== 'Mezzanine');
+        }
+
+        // Handle Penthouse logic
+        if (!building.hasPenthouse) {
+             filteredTypes = filteredTypes.filter(type => type !== 'Penthouse');
+        }
+
+        // Handle Rooftop logic
+        if (!building.hasRooftop) {
+             filteredTypes = filteredTypes.filter(type => type !== 'Rooftop');
         }
 
         return filteredTypes;
@@ -282,6 +295,24 @@ export default function BuildingPage() {
                                         </p>
                                     </div>
                                 </div>
+                                <div className="flex items-center gap-2 rounded-md border p-3">
+                                    {building.hasPenthouse ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium">Penthouse</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {building.hasPenthouse ? 'Configured' : 'Not configured'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 rounded-md border p-3">
+                                    {building.hasRooftop ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium">Rooftop</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {building.hasRooftop ? 'Configured' : 'Not configured'}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </>
                     ) : (
@@ -289,6 +320,8 @@ export default function BuildingPage() {
                             <div className="h-8 w-1/2 bg-muted rounded animate-pulse" />
                             <div className="h-8 w-2/3 bg-muted rounded animate-pulse" />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                                <div className="h-12 bg-muted rounded animate-pulse" />
+                                <div className="h-12 bg-muted rounded animate-pulse" />
                                 <div className="h-12 bg-muted rounded animate-pulse" />
                                 <div className="h-12 bg-muted rounded animate-pulse" />
                             </div>

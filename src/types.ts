@@ -11,6 +11,8 @@ export type Building = {
     basementCount?: number;
     hasMezzanine?: boolean;
     mezzanineCount?: number;
+    hasPenthouse?: boolean;
+    hasRooftop?: boolean;
 };
 
 export type Level = {

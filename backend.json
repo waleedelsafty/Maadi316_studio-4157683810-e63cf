@@ -86,6 +86,14 @@
         "mezzanineCount": {
           "type": "number",
           "description": "The number of mezzanine levels (1-4)."
+        },
+        "hasPenthouse": {
+          "type": "boolean",
+          "description": "Indicates if the building has a penthouse level."
+        },
+        "hasRooftop": {
+          "type": "boolean",
+          "description": "Indicates if the building has a usable rooftop level."
         }
       },
       "required": ["name", "address", "ownerId", "createdAt"]

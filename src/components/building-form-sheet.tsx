@@ -33,6 +33,8 @@ const formSchema = z.object({
   basementCount: z.number().optional(),
   hasMezzanine: z.boolean().default(false),
   mezzanineCount: z.number().optional(),
+  hasPenthouse: z.boolean().default(false),
+  hasRooftop: z.boolean().default(false),
 });
 
 type BuildingFormSheetProps = {
@@ -63,6 +65,8 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
       basementCount: 1,
       hasMezzanine: false,
       mezzanineCount: 1,
+      hasPenthouse: false,
+      hasRooftop: false,
     }
   });
 
@@ -133,6 +137,8 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
         basementCount: building?.basementCount || 1,
         hasMezzanine: building?.hasMezzanine || false,
         mezzanineCount: building?.mezzanineCount || 1,
+        hasPenthouse: building?.hasPenthouse || false,
+        hasRooftop: building?.hasRooftop || false,
       });
     }
   }, [isOpen, building, reset]);
@@ -234,6 +240,41 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
                     </div>
                   )}
               </div>
+              
+              <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                    <Label>Has Penthouse</Label>
+                     <p className="text-xs text-muted-foreground">Does this building have a penthouse?</p>
+                </div>
+                 <Controller
+                    name="hasPenthouse"
+                    control={control}
+                    render={({ field }) => (
+                        <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                        />
+                    )}
+                />
+              </div>
+
+               <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                    <Label>Has Rooftop</Label>
+                    <p className="text-xs text-muted-foreground">Is there a usable rooftop level?</p>
+                </div>
+                 <Controller
+                    name="hasRooftop"
+                    control={control}
+                    render={({ field }) => (
+                        <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                        />
+                    )}
+                />
+              </div>
+
 
           </div>
           <SheetFooter>
