@@ -139,19 +139,40 @@ export default function BuildingPage() {
     }, [levels, sortOrder]);
 
 
-    const handleUpdateBuilding = async (field: keyof Building, value: string | boolean) => {
+    const handleUpdateBuilding = async (field: keyof Building, value: string | boolean | number) => {
         if (!buildingRef) return;
+
+        let updateData: { [key: string]: any } = { [field]: value };
+
+        // When toggling features off, reset their counts.
+        // When toggling on, set a default count if it's not already set.
+        if (field === 'hasBasement') {
+            if (value === false) {
+                updateData.basementCount = 0;
+            } else if (!building?.basementCount) {
+                updateData.basementCount = 1;
+            }
+        }
+        if (field === 'hasMezzanine') {
+            if (value === false) {
+                updateData.mezzanineCount = 0;
+            } else if (!building?.mezzanineCount) {
+                updateData.mezzanineCount = 1;
+            }
+        }
+
+
         try {
-            await updateDoc(buildingRef, { [field]: value });
+            await updateDoc(buildingRef, updateData);
             toast({
                 title: 'Building Updated',
-                description: `The building's ${field} has been updated.`,
+                description: `The building has been updated.`,
             });
         } catch (serverError) {
              errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: buildingRef.path,
                 operation: 'update',
-                requestResourceData: { [field]: value },
+                requestResourceData: updateData,
             }));
         }
     };
@@ -278,7 +299,7 @@ export default function BuildingPage() {
                             <CardDescription>View and manage the general details and structure of your building.</CardDescription>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => setIsBuildingSheetOpen(true)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Building Details
+                            <Edit className="mr-2 h-4 w-4" /> Edit Building
                         </Button>
                     </div>
                 </CardHeader>
@@ -301,22 +322,55 @@ export default function BuildingPage() {
                             <div className="space-y-4 pt-4">
                                 <h4 className="font-medium">Building Structure</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                    
                                     <div className="flex items-center justify-between border-b pb-2">
                                         <Label htmlFor="hasBasement" className="text-sm font-medium text-muted-foreground">Has Basement</Label>
-                                        <Switch
-                                            id="hasBasement"
-                                            checked={building.hasBasement}
-                                            onCheckedChange={(checked) => handleUpdateBuilding('hasBasement', checked)}
-                                        />
+                                        <div className="flex items-center gap-4">
+                                            {building.hasBasement && (
+                                                <Select
+                                                    value={String(building.basementCount || '1')}
+                                                    onValueChange={(value) => handleUpdateBuilding('basementCount', Number(value))}
+                                                >
+                                                    <SelectTrigger className="h-8 w-20">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {[1, 2, 3].map(num => <SelectItem key={num} value={String(num)}>{num}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                            <Switch
+                                                id="hasBasement"
+                                                checked={building.hasBasement}
+                                                onCheckedChange={(checked) => handleUpdateBuilding('hasBasement', checked)}
+                                            />
+                                        </div>
                                     </div>
+
                                     <div className="flex items-center justify-between border-b pb-2">
                                         <Label htmlFor="hasMezzanine" className="text-sm font-medium text-muted-foreground">Has Mezzanine</Label>
-                                        <Switch
-                                            id="hasMezzanine"
-                                            checked={building.hasMezzanine}
-                                            onCheckedChange={(checked) => handleUpdateBuilding('hasMezzanine', checked)}
-                                        />
+                                         <div className="flex items-center gap-4">
+                                            {building.hasMezzanine && (
+                                                <Select
+                                                    value={String(building.mezzanineCount || '1')}
+                                                    onValueChange={(value) => handleUpdateBuilding('mezzanineCount', Number(value))}
+                                                >
+                                                    <SelectTrigger className="h-8 w-20">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {[1, 2, 3, 4].map(num => <SelectItem key={num} value={String(num)}>{num}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                            <Switch
+                                                id="hasMezzanine"
+                                                checked={building.hasMezzanine}
+                                                onCheckedChange={(checked) => handleUpdateBuilding('hasMezzanine', checked)}
+                                            />
+                                        </div>
                                     </div>
+
                                     <div className="flex items-center justify-between border-b pb-2">
                                         <Label htmlFor="hasPenthouse" className="text-sm font-medium text-muted-foreground">Has Penthouse</Label>
                                         <Switch
@@ -487,3 +541,5 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    
