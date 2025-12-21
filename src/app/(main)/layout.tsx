@@ -2,6 +2,7 @@
 
 import { AppProvider } from "@/components/app-provider";
 import { AuthProvider } from "@/components/auth-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 export default function MainLayout({
   children,
@@ -10,7 +11,10 @@ export default function MainLayout({
 }) {
   return (
     <AppProvider>
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider>
+        {children}
+        <Toaster />
+      </AuthProvider>
     </AppProvider>
   );
 }
