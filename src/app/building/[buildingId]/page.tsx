@@ -59,6 +59,12 @@ export default function BuildingPage() {
     }, [firestore, buildingId]);
 
     const { data: levels } = useCollection(levelsQuery);
+
+    const availableLevelTypes = useMemo(() => {
+        if (!levels) return levelTypes;
+        const existingUniqueTypes = new Set(levels.filter(level => uniqueLevelTypes.includes(level.type)).map(level => level.type));
+        return levelTypes.filter(type => !existingUniqueTypes.has(type));
+    }, [levels]);
     
     const sortedLevels = useMemo(() => {
         if (!levels) return [];
@@ -112,16 +118,6 @@ export default function BuildingPage() {
                 variant: 'destructive',
                 title: 'Missing fields',
                 description: 'Please provide a name and type for the level.',
-            });
-            return;
-        }
-
-        // Check for uniqueness of level types like 'Ground', 'Rooftop', etc.
-        if (uniqueLevelTypes.includes(levelType) && levels.some(level => level.type === levelType)) {
-             toast({
-                variant: 'destructive',
-                title: 'Duplicate Level Type',
-                description: `A "${levelType}" level already exists for this building. Only one is allowed.`,
             });
             return;
         }
@@ -273,7 +269,7 @@ export default function BuildingPage() {
                                         <SelectValue placeholder="Select type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {levelTypes.map(type => (
+                                        {availableLevelTypes.map(type => (
                                             <SelectItem key={type} value={type}>{type}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -353,5 +349,7 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    
 
     
