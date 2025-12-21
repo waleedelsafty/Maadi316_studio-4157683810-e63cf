@@ -9,7 +9,6 @@ import {
   serverTimestamp,
   query,
   where,
-  orderBy,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +23,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { EditBuildingSheet } from '@/components/edit-building-sheet';
+import type { Building } from '@/types';
+
 
 function GeneralSettingsTab() {
   const user = useUser();
@@ -60,17 +62,17 @@ function BuildingsSettingsTab() {
 
   const [buildingName, setBuildingName] = useState('');
   const [buildingAddress, setBuildingAddress] = useState('');
+  const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
 
   const buildingsQuery = useMemo(() => {
     if (!user || !firestore) return null;
-    // Removed orderBy to prevent index error on a clean project.
     return query(
       collection(firestore, 'buildings'),
       where('ownerId', '==', user.uid)
     );
   }, [user, firestore]);
 
-  const { data: buildings, error } = useCollection(buildingsQuery);
+  const { data: buildings } = useCollection(buildingsQuery);
 
   const handleAddBuilding = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,7 +152,7 @@ function BuildingsSettingsTab() {
                     <p className="text-muted-foreground text-sm">{building.address}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">Edit</Button>
+                    <Button variant="outline" size="sm" onClick={() => setEditingBuilding(building as Building)}>Edit</Button>
                     <Button size="sm">Open</Button>
                   </div>
                 </CardContent>
@@ -165,6 +167,17 @@ function BuildingsSettingsTab() {
           )}
         </div>
       </div>
+       {editingBuilding && (
+            <EditBuildingSheet
+                building={editingBuilding}
+                isOpen={!!editingBuilding}
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                        setEditingBuilding(null);
+                    }
+                }}
+            />
+        )}
     </div>
   );
 }

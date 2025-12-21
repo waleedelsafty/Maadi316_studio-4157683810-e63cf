@@ -17,12 +17,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { EditBuildingSheet } from '@/components/edit-building-sheet';
+import type { Building } from '@/types';
 
 export default function HomePage() {
   const user = useUser();
   const firestore = useFirestore();
   const [noteText, setNoteText] = useState('');
   const { toast } = useToast();
+  const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
+
 
   const notesQuery = useMemo(() => {
     if (!user || !firestore) return null;
@@ -36,7 +40,6 @@ export default function HomePage() {
 
   const buildingsQuery = useMemo(() => {
     if (!user || !firestore) return null;
-    // Removed orderBy to prevent index error on a clean project.
     return query(
       collection(firestore, 'buildings'),
       where('ownerId', '==', user.uid)
@@ -90,7 +93,7 @@ export default function HomePage() {
                       <p className="text-muted-foreground text-sm">{building.address}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">Edit</Button>
+                      <Button variant="outline" size="sm" onClick={() => setEditingBuilding(building as Building)}>Edit</Button>
                       <Button size="sm">Open</Button>
                     </div>
                   </CardContent>
@@ -145,6 +148,17 @@ export default function HomePage() {
             </div>
           )}
         </div>
+        {editingBuilding && (
+            <EditBuildingSheet
+                building={editingBuilding}
+                isOpen={!!editingBuilding}
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                        setEditingBuilding(null);
+                    }
+                }}
+            />
+        )}
     </main>
   );
 }
