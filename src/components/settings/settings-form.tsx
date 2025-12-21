@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -32,96 +33,66 @@ import { Label } from "../ui/label";
 import { useState, useMemo } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Separator } from "../ui/separator";
+import { suggestInitialBuildingSettings } from "@/ai/flows/suggest-initial-building-settings";
+import { Loader } from "lucide-react";
+import { Textarea } from "../ui/textarea";
 
-
-const formSchema = z.object({
+const areaSchema = z.object({
   global_amenities_sqm: z.coerce.number().min(0, "Must be a positive number."),
   floor_standard_sqm: z.coerce.number().min(0, "Must be a positive number."),
-  shop_multiplier: z.coerce.number().min(0),
-  office_multiplier: z.coerce.number().min(0),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+const multiplierSchema = z.object({
+  Shop: z.coerce.number().min(0),
+  Office: z.coerce.number().min(0),
+});
+
+const buildingDescriptionSchema = z.object({
+    description: z.string().min(10, "Please provide a more detailed description."),
+});
 
 export function SettingsForm() {
-  const { settings, updateSettings, loading } = useApp();
+  const { settings, updateSettings, loading, units } = useApp();
   const { toast } = useToast();
 
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const [calculationMethod, setCalculationMethod] = useState(settings.financials.calculation_method);
   const [quarterlyExpenses, setQuarterlyExpenses] = useState(settings.financials.current_annual_budget / 4);
   const [ratePerSqm, setRatePerSqm] = useState(settings.financials.rate_per_sqm);
 
   const newAnnualBudget = useMemo(() => quarterlyExpenses * 4, [quarterlyExpenses]);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const areaForm = useForm<z.infer<typeof areaSchema>>({
+    resolver: zodResolver(areaSchema),
     defaultValues: {
       global_amenities_sqm: settings.commonAreas.global_amenities_sqm,
       floor_standard_sqm: settings.commonAreas.floor_standard_sqm,
-      shop_multiplier: settings.financials.type_multipliers.Shop,
-      office_multiplier: settings.financials.type_multipliers.Office,
     },
   });
-  
+
+  const multiplierForm = useForm<z.infer<typeof multiplierSchema>>({
+    resolver: zodResolver(multiplierSchema),
+    defaultValues: settings.financials.type_multipliers,
+  });
+
+  const descriptionForm = useForm<z.infer<typeof buildingDescriptionSchema>>({
+    resolver: zodResolver(buildingDescriptionSchema),
+    defaultValues: {
+        description: `A building with ${units.length} units, containing a mix of residential flats, duplexes, offices, and shops. Key amenities include a pool, lobby, and gym.`,
+    }
+  });
+
   function onAreaSubmit(values: z.infer<typeof areaSchema>) {
-    updateSettings({
-        commonAreas: {
-            global_amenities_sqm: values.global_amenities_sqm,
-            floor_standard_sqm: values.floor_standard_sqm,
-        }
-    });
+    updateSettings({ commonAreas: values });
     toast({
       title: "Area Settings Updated",
       description: "Common area settings have been saved and all unit areas recalculated.",
     });
   }
 
-  const handleMethodChange = (value: "budget_based" | "rate_based") => {
-    setCalculationMethod(value);
-    updateSettings({ financials: { calculation_method: value } });
-    toast({
-        title: "Calculation Method Updated",
-        description: `Switched to ${value.replace('_', ' ')} method.`,
-    });
-  }
-  
-  const handleRecalculate = () => {
-    const newSettings = {
-        ...settings,
-        financials: {
-            ...settings.financials,
-            calculation_method: calculationMethod,
-            current_annual_budget: calculationMethod === 'budget_based' ? newAnnualBudget : settings.financials.current_annual_budget,
-            rate_per_sqm: calculationMethod === 'rate_based' ? ratePerSqm : settings.financials.rate_per_sqm,
-        }
-    };
-    updateSettings(newSettings);
-    toast({
-      title: "Fees Recalculated",
-      description: `All unit fees have been updated based on the new settings.`,
-    });
-  };
-  
-  const areaSchema = z.object({
-      global_amenities_sqm: z.coerce.number().min(0),
-      floor_standard_sqm: z.coerce.number().min(0),
-  });
-
-  const multiplierSchema = z.object({
-      shop_multiplier: z.coerce.number().min(0),
-      office_multiplier: z.coerce.number().min(0),
-  });
-
   function onMultiplierSubmit(values: z.infer<typeof multiplierSchema>) {
     updateSettings({
-        financials: {
-            ...settings.financials,
-            type_multipliers: {
-                Shop: values.shop_multiplier,
-                Office: values.office_multiplier,
-            }
-        }
+      financials: { ...settings.financials, type_multipliers: values }
     });
     toast({
       title: "Multipliers Updated",
@@ -129,45 +100,90 @@ export function SettingsForm() {
     });
   }
 
-  const areaForm = useForm<z.infer<typeof areaSchema>>({
-    resolver: zodResolver(areaSchema),
-    defaultValues: {
-        global_amenities_sqm: settings.commonAreas.global_amenities_sqm,
-        floor_standard_sqm: settings.commonAreas.floor_standard_sqm,
-    },
-  });
-
-  const multiplierForm = useForm<z.infer<typeof multiplierSchema>>({
-    resolver: zodResolver(multiplierSchema),
-    defaultValues: {
-        shop_multiplier: settings.financials.type_multipliers.Shop,
-        office_multiplier: settings.financials.type_multipliers.Office,
-    },
-  });
-
-  const RecalculationDialogContent = () => {
-      if (calculationMethod === 'budget_based') {
-          return (
-             <AlertDialogDescription>
-                This will recalculate fees for all billable units based on a new annual budget of <span className="font-bold">{formatCurrency(newAnnualBudget)}</span>. This action cannot be undone.
-              </AlertDialogDescription>
-          )
-      }
-      return (
-        <AlertDialogDescription>
-            This will recalculate fees for all billable units based on a new rate of <span className="font-bold">{formatCurrency(ratePerSqm)} / m²</span>. This action cannot be undone.
-        </AlertDialogDescription>
-      )
+  async function onDescriptionSubmit(values: z.infer<typeof buildingDescriptionSchema>) {
+    setIsSuggesting(true);
+    try {
+        const result = await suggestInitialBuildingSettings({ buildingDescription: values.description });
+        areaForm.setValue('global_amenities_sqm', result.globalAmenitiesSqm);
+        areaForm.setValue('floor_standard_sqm', result.floorStandardSqm);
+        setQuarterlyExpenses(result.currentAnnualBudget / 4);
+        toast({
+            title: "AI Suggestions Applied",
+            description: "The AI has suggested initial settings based on your description."
+        });
+    } catch (error) {
+        console.error("Failed to get AI suggestions:", error);
+        toast({
+            variant: "destructive",
+            title: "Suggestion Failed",
+            description: "Could not get suggestions from the AI. Please try again."
+        });
+    }
+    setIsSuggesting(false);
   }
+
+  const handleMethodChange = (value: "budget_based" | "rate_based") => {
+    setCalculationMethod(value);
+    updateSettings({ financials: { calculation_method: value } });
+    toast({
+        title: "Calculation Method Updated",
+        description: `Switched to ${value.replace(/_/g, ' ')} method.`,
+    });
+  }
+  
+  const handleRecalculate = () => {
+    const financialSettingsUpdate = {
+        ...settings.financials,
+        calculation_method: calculationMethod,
+        current_annual_budget: calculationMethod === 'budget_based' ? newAnnualBudget : settings.financials.current_annual_budget,
+        rate_per_sqm: calculationMethod === 'rate_based' ? ratePerSqm : settings.financials.rate_per_sqm,
+    };
+    updateSettings({ financials: financialSettingsUpdate });
+    toast({
+      title: "Fees Recalculated",
+      description: `All unit fees have been updated based on the new settings.`,
+    });
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        <Card className="xl:col-span-3">
+            <CardHeader>
+                <CardTitle>Building Setup Assistant (AI)</CardTitle>
+                <CardDescription>
+                    Describe your building, and the AI will suggest initial settings for common areas and budget.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form {...descriptionForm}>
+                    <form onSubmit={descriptionForm.handleSubmit(onDescriptionSubmit)} className="space-y-4">
+                        <FormField
+                            control={descriptionForm.control}
+                            name="description"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Building Description</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="e.g., A 10-story luxury apartment building with 50 units..." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="submit" disabled={isSuggesting || loading}>
+                            {isSuggesting && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+                            {isSuggesting ? "Analyzing..." : "Get AI Suggestions"}
+                        </Button>
+                    </form>
+                </Form>
+            </CardContent>
+        </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Common Area Settings</CardTitle>
           <CardDescription>
-            Adjust the square meter values for common areas. This will trigger a
-            recalculation of all unit gross areas.
+            Adjust common area sizes. Triggers recalculation of all unit gross areas.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -217,7 +233,7 @@ export function SettingsForm() {
         <CardHeader>
             <CardTitle>Fee Calculation Method</CardTitle>
             <CardDescription>
-                Choose how to calculate maintenance fees and set the corresponding values.
+                Choose how to calculate fees and set the corresponding values.
             </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -272,7 +288,9 @@ export function SettingsForm() {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Confirm Fee Recalculation</AlertDialogTitle>
-                  <RecalculationDialogContent />
+                  <AlertDialogDescription>
+                    This will recalculate fees for all billable units based on the new settings. This action cannot be undone.
+                  </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -297,7 +315,7 @@ export function SettingsForm() {
             <form onSubmit={multiplierForm.handleSubmit(onMultiplierSubmit)} className="space-y-8">
               <FormField
                 control={multiplierForm.control}
-                name="shop_multiplier"
+                name="Shop"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Shop Multiplier</FormLabel>
@@ -311,7 +329,7 @@ export function SettingsForm() {
               />
               <FormField
                 control={multiplierForm.control}
-                name="office_multiplier"
+                name="Office"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Office Multiplier</FormLabel>
@@ -333,3 +351,5 @@ export function SettingsForm() {
     </div>
   );
 }
+
+    
