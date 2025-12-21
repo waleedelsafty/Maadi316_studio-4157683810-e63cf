@@ -63,10 +63,10 @@ function BuildingsSettingsTab() {
 
   const buildingsQuery = useMemo(() => {
     if (!user || !firestore) return null;
+    // Removed orderBy to prevent index error on a clean project.
     return query(
       collection(firestore, 'buildings'),
-      where('ownerId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('ownerId', '==', user.uid)
     );
   }, [user, firestore]);
 
