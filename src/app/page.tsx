@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function HomePage() {
   const user = useUser();
@@ -47,24 +49,26 @@ export default function HomePage() {
     e.preventDefault();
     if (!noteText.trim() || !user || !firestore) return;
 
-    try {
-      await addDoc(collection(firestore, 'users', user.uid, 'notes'), {
-        text: noteText,
-        createdAt: serverTimestamp(),
+    const newNote = {
+      text: noteText,
+      createdAt: serverTimestamp(),
+    };
+
+    addDoc(collection(firestore, 'users', user.uid, 'notes'), newNote)
+      .then(() => {
+        setNoteText('');
+        toast({
+          title: 'Note added!',
+          description: 'Your new note has been saved.',
+        });
+      })
+      .catch((serverError) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `/users/${user.uid}/notes`,
+          operation: 'create',
+          requestResourceData: newNote,
+        }));
       });
-      setNoteText('');
-      toast({
-        title: 'Note added!',
-        description: 'Your new note has been saved.',
-      });
-    } catch (error) {
-      console.error('Error adding note: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Uh oh! Something went wrong.',
-        description: 'Could not save your note. Please try again.',
-      });
-    }
   };
 
   if (!user || !firestore) {
