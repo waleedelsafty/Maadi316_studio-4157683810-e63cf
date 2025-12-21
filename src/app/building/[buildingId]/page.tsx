@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useUser } from '@/firebase';
 import { doc, collection, addDoc, serverTimestamp, query, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ const levelTypeOrder: Record<Level['type'], number> = {
 
 export default function BuildingPage() {
     const { buildingId } = useParams() as { buildingId: string };
+    const router = useRouter();
     const firestore = useFirestore();
     const user = useUser();
     const { toast } = useToast();
@@ -285,10 +286,10 @@ export default function BuildingPage() {
     return (
         <main className="w-full max-w-4xl mx-auto space-y-8">
             <div className="mb-4">
-                <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" onClick={() => router.back()} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
                     <ArrowLeft className="h-4 w-4" />
-                    Back to Buildings
-                </Link>
+                    Back
+                </Button>
             </div>
 
             <Card>
@@ -541,5 +542,3 @@ export default function BuildingPage() {
         </main>
     );
 }
-
-    
