@@ -1,3 +1,4 @@
+
 {
   "projectId": "studio-4157683810-e63cf",
   "entities": {
@@ -61,6 +62,14 @@
           "type": "string",
           "format": "date-time",
           "description": "The timestamp when the building was created."
+        },
+        "floors": {
+          "type": "number",
+          "description": "The total number of floors in the building."
+        },
+        "units": {
+          "type": "number",
+          "description": "The total number of units in the building."
         }
       },
       "required": ["name", "address", "ownerId", "createdAt"]

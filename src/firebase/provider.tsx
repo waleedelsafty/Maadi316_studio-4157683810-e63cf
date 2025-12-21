@@ -1,18 +1,15 @@
+
 'use client';
 
 import { FirebaseApp } from 'firebase/app';
-import { Auth, connectAuthEmulator } from 'firebase/auth';
-import {
-  Firestore,
-  connectFirestoreEmulator,
-} from 'firebase/firestore';
+import { Auth } from 'firebase/auth';
+import { Firestore } from 'firebase/firestore';
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { AuthProvider, useAuth as useFirebaseAuth } from './auth/provider';
+import { AuthProvider } from './auth/provider';
 import { FirestoreProvider } from './firestore/provider';
 import { useUser } from './auth/use-user';
-import { Toaster } from '@/components/ui/toaster';
 
 interface FirebaseContextValue {
   firebaseApp: FirebaseApp;
@@ -43,7 +40,6 @@ export function FirebaseProvider(props: React.PropsWithChildren<FirebaseContextV
             <AuthRedirect>
               {children}
             </AuthRedirect>
-            <Toaster />
           </FirestoreProvider>
         </AuthProvider>
     </FirebaseContext.Provider>
@@ -65,14 +61,14 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
 
         const isAuthPage = pathname === '/login';
 
-        if (user && isAuthPage) {
-            router.push('/');
-        } else if (!user && !isAuthPage) {
+        if (user === null && !isAuthPage) {
             router.push('/login');
+        } else if (user && isAuthPage) {
+            router.push('/');
         }
     }, [user, pathname, router, isMounted]);
 
-    // Prevent flash of unauthenticated content
+    // Prevent flash of unauthenticated content, but allow login page to render
     if (!isMounted || (user === undefined && pathname !== '/login') ) {
         return null; // Or a loading spinner
     }

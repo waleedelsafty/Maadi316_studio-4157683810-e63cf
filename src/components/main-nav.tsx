@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
-import { Home, LogOut, Settings } from 'lucide-react';
+import { Home, LogOut, Settings, Building } from 'lucide-react';
 import { Separator } from './ui/separator';
 
 export function MainNav({ children }: { children: React.ReactNode }) {
@@ -49,6 +49,11 @@ export function MainNav({ children }: { children: React.ReactNode }) {
       .join('');
   };
 
+  if (!user) {
+    return <>{children}</>;
+  }
+
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -75,39 +80,51 @@ export function MainNav({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton 
                   asChild
                   isActive={pathname === '/'}
+                  tooltip="Home"
                 >
                     <Link href="/">
                         <Home />
-                        Home
+                        <span>Home</span>
                     </Link>
                 </SidebarMenuButton>
              </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith('/settings')}
+                  tooltip="Settings"
+                >
+                  <Link href="/settings">
+                    <Settings />
+                    <span>Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
            </SidebarMenu>
         </SidebarContent>
         <Separator />
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === '/settings'}
-              >
-                <Link href="/settings">
-                  <Settings />
-                  Settings
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleSignOut}>
+              <SidebarMenuButton onClick={handleSignOut} tooltip="Sign Out">
                 <LogOut />
-                Sign Out
+                <span>Sign Out</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset>
+        <header className="flex items-center gap-2 border-b p-2 h-14">
+            <SidebarTrigger />
+            <h2 className="text-lg font-semibold">
+                {pathname === '/' ? 'Home' : 'Settings'}
+            </h2>
+        </header>
+        <div className="p-4 sm:p-6">
+            {children}
+        </div>
+        </SidebarInset>
     </SidebarProvider>
   );
 }
