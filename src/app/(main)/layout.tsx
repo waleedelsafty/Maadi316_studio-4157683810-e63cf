@@ -1,8 +1,9 @@
 "use client";
 
 import { AppProvider } from "@/components/app-provider";
-import { AuthProvider } from "@/components/auth-provider";
-import { Toaster } from "@/components/ui/toaster";
+import { FirebaseClientProvider, initializeFirebase } from "@/firebase";
+
+const firebaseApp = initializeFirebase();
 
 export default function MainLayout({
   children,
@@ -11,10 +12,9 @@ export default function MainLayout({
 }) {
   return (
     <AppProvider>
-      <AuthProvider>
+      <FirebaseClientProvider firebaseApp={firebaseApp}>
         {children}
-        <Toaster />
-      </AuthProvider>
+      </FirebaseClientProvider>
     </AppProvider>
   );
 }

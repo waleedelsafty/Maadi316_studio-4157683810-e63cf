@@ -1,29 +1,22 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/components/auth-provider';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/firebase/hooks';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 export default function LoginPage() {
-  const { user, signInWithGoogle } = useAuth();
-  const router = useRouter();
-
-  // This effect will run when the user state changes.
-  // The redirect is now primarily handled by the AuthProvider,
-  // but this is a good secondary check.
-  useEffect(() => {
-    if (user) {
-      router.push('/');
-    }
-  }, [user, router]);
-
-
-  // If the user object is loading, we can show a blank screen to prevent flicker
-  if (user === undefined) {
-    return null;
-  }
+  const auth = useAuth();
   
+  const handleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      // The redirect is handled by the AuthRedirect component in the provider
+    } catch (error) {
+      console.error('Error signing in with Google', error);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="p-8 border rounded-lg shadow-md max-w-sm w-full text-center">
@@ -31,7 +24,7 @@ export default function LoginPage() {
         <p className="mb-6 text-muted-foreground">
           Sign in to create and manage your notes.
         </p>
-        <Button onClick={signInWithGoogle} className="w-full">
+        <Button onClick={handleSignIn} className="w-full">
           Sign in with Google
         </Button>
       </div>

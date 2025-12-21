@@ -1,66 +1,44 @@
 'use client';
 
-import { useAuth } from '@/components/auth-provider';
+import { useUser, useFirestore, useAuth, useCollection } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
-import { db } from '@/lib/firebase/firestore';
 import {
   collection,
   addDoc,
   serverTimestamp,
   query,
-  onSnapshot,
   orderBy,
-  Query,
-  DocumentData,
 } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
-// Custom hook to fetch a collection from Firestore
-function useCollection<T>(q: Query<T, DocumentData> | null) {
-  const [data, setData] = useState<(T & { id: string })[] | null>(null);
-
-  useEffect(() => {
-    if (!q) return;
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map((doc) => ({
-        ...doc.data(),
-        id: doc.id,
-      }));
-      setData(docs);
-    });
-
-    return unsubscribe;
-  }, [q]);
-
-  return { data };
-}
-
 export default function HomePage() {
-  const { user, signOut } = useAuth();
+  const user = useUser();
+  const firestore = useFirestore();
+  const auth = useAuth();
   const [noteText, setNoteText] = useState('');
   const { toast } = useToast();
 
   const notesQuery = useMemo(() => {
-    if (!user) return null;
+    if (!user || !firestore) return null;
     return query(
-      collection(db, 'users', user.uid, 'notes'),
+      collection(firestore, 'users', user.uid, 'notes'),
       orderBy('createdAt', 'desc')
     );
-  }, [user]);
+  }, [user, firestore]);
 
   const { data: notes } = useCollection(notesQuery);
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!noteText.trim() || !user) return;
+    if (!noteText.trim() || !user || !firestore) return;
 
     try {
-      await addDoc(collection(db, 'users', user.uid, 'notes'), {
+      await addDoc(collection(firestore, 'users', user.uid, 'notes'), {
         text: noteText,
         createdAt: serverTimestamp(),
       });
@@ -79,7 +57,16 @@ export default function HomePage() {
     }
   };
 
-  if (!user) {
+  const handleSignOut = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error signing out', error);
+    }
+  };
+
+  if (!user || !firestore) {
     // AuthProvider handles the redirect, so we can just show a loader or null
     return null; 
   }
@@ -91,7 +78,7 @@ export default function HomePage() {
           <h1 className="text-4xl font-bold">My Notes</h1>
           <Button
             variant="outline"
-            onClick={signOut}
+            onClick={handleSignOut}
           >
             Sign Out
           </Button>
