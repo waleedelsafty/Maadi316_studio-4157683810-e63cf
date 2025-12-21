@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { AuthProvider } from './auth/provider';
 import { FirestoreProvider } from './firestore/provider';
 import { useUser } from './auth/use-user';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 interface FirebaseContextValue {
   firebaseApp: FirebaseApp;
@@ -38,6 +39,7 @@ export function FirebaseProvider(props: React.PropsWithChildren<FirebaseContextV
         <AuthProvider auth={auth}>
           <FirestoreProvider firestore={firestore}>
             <AuthRedirect>
+              <FirebaseErrorListener />
               {children}
             </AuthRedirect>
           </FirestoreProvider>

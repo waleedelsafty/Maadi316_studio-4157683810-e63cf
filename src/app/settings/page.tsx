@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 function GeneralSettingsTab() {
   const user = useUser();
@@ -68,38 +70,40 @@ function BuildingsSettingsTab() {
     );
   }, [user, firestore]);
 
-  const { data: buildings } = useCollection(buildingsQuery);
+  const { data: buildings, error } = useCollection(buildingsQuery);
 
   const handleAddBuilding = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!buildingName.trim() || !buildingAddress.trim() || !user || !firestore)
       return;
 
-    try {
-      await addDoc(collection(firestore, 'buildings'), {
-        name: buildingName,
-        address: buildingAddress,
-        ownerId: user.uid,
-        createdAt: serverTimestamp(),
-        floors: 0,
-        units: 0,
-      });
-      setBuildingName('');
-      setBuildingAddress('');
-      toast({
-        title: 'Building added!',
-        description: 'Your new building has been saved.',
-      });
-    } catch (error) {
-      console.error('Error adding building: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Uh oh! Something went wrong.',
-        description: 'Could not save your building. Please try again.',
-      });
-    }
-  };
+    const newBuilding = {
+      name: buildingName,
+      address: buildingAddress,
+      ownerId: user.uid,
+      createdAt: serverTimestamp(),
+      floors: 0,
+      units: 0,
+    };
 
+    addDoc(collection(firestore, 'buildings'), newBuilding)
+      .then(() => {
+        setBuildingName('');
+        setBuildingAddress('');
+        toast({
+          title: 'Building added!',
+          description: 'Your new building has been saved.',
+        });
+      })
+      .catch((serverError) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/buildings',
+          operation: 'create',
+          requestResourceData: newBuilding
+        }));
+      });
+  };
+  
   return (
     <div className="space-y-8">
       <Card>
