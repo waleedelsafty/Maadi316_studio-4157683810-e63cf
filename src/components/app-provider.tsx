@@ -37,13 +37,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<BuildingSettings | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const performFullRecalculation = useCallback((currentSettings: BuildingSettings): Unit[] => {
-    // This function is now purely for calculation and doesn't assume initial data structure.
-    const mappedUnits: Unit[] = initialUnitsData.map(u => ({
+  const performFullRecalculation = useCallback((currentSettings: BuildingSettings, baseUnits: any[]): Unit[] => {
+    const mappedUnits: Unit[] = baseUnits.map(u => ({
       ...u,
       net_sqm: u.sqm,
       billing_parent_code: u.parent,
-      type_factor: 1.0, // Will be calculated in calculateAreaShares
+      type_factor: 1.0,
       share_local_common: 0,
       share_global_common: 0,
       total_gross_sqm: 0,
@@ -70,8 +69,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
         };
 
-        // Step 2: Perform calculations using these new settings.
-        const calculatedUnits = performFullRecalculation(clientSideSettings);
+        // Step 2: Perform calculations using these new settings and the initial raw data.
+        const calculatedUnits = performFullRecalculation(clientSideSettings, initialUnitsData);
         
         // Step 3: Set both state variables at the same time.
         setSettings(clientSideSettings);
@@ -84,7 +83,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateSettings = (newSettingsPartial: Partial<BuildingSettings>) => {
     setSettings(prevSettings => {
-        if (!prevSettings) return null; // Should not happen with new logic
+        if (!prevSettings) return null;
         
         const newSettings: BuildingSettings = {
             ...prevSettings,
@@ -101,7 +100,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         };
 
         // When settings change, always trigger a full recalculation.
-        const recalculatedUnits = performFullRecalculation(newSettings);
+        const recalculatedUnits = performFullRecalculation(newSettings, initialUnitsData);
         setUnits(recalculatedUnits);
         
         return newSettings;
