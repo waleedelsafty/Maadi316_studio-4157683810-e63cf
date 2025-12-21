@@ -14,6 +14,11 @@ This is a Next.js application built with Firebase Studio for managing building i
 
 ## Version History
 
+### v0.1.4
+- **Direct Editing UI**: Replaced static building details with interactive Switch and Select components on the building detail page, allowing for direct, inline modification of properties like `hasBasement`, `basementCount`, `hasPenthouse`, etc., without needing a separate edit form.
+- **Table-based Level List**: Refactored the list of building levels into a compact and scalable table structure for a cleaner and more professional presentation.
+- **Level Editing**: Implemented the ability to edit an existing level's details through a slide-out sheet.
+
 ### v0.1.3
 - **Settings Redesign**: Reorganized settings navigation from tabs to a collapsible sidebar menu.
 - **Inline Editing**: Implemented inline editing for building name and address on the detail page.
