@@ -14,6 +14,15 @@ This is a Next.js application built with Firebase Studio for managing building i
 
 ## Version History
 
+### v0.1.3
+- **Settings Redesign**: Reorganized settings navigation from tabs to a collapsible sidebar menu.
+- **Inline Editing**: Implemented inline editing for building name and address on the detail page.
+- **Level Management UI**: The "Add Level" form is now hidden by default and appears on button click.
+- **Advanced Sorting**: Added complex, multi-level sorting (asc/desc) for building levels based on their type and floor number.
+- **Level Deletion**: Implemented the ability to delete levels from a building.
+- **Validation**: Added validation to prevent the creation of duplicate unique levels (e.g., Ground, Rooftop).
+- **Component Refactor**: Consolidated building creation and editing logic into a single reusable `BuildingFormSheet` component.
+
 ### v0.1.2
 - **Building Structure**: Added a detailed view for each building.
 - **Level Management**: Users can now add structural levels (e.g., Basement, Ground, Typical Floor) to each building.
