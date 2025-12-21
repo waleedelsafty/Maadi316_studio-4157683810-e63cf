@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
+const uniqueLevelTypes: Level['type'][] = ['Ground', 'Penthouse', 'Rooftop'];
 
 const levelTypeOrder: Record<Level['type'], number> = {
     'Rooftop': 6,
@@ -66,7 +67,7 @@ export default function BuildingPage() {
             const typeB = levelTypeOrder[b.type];
 
             if (typeA !== typeB) {
-                return sortOrder === 'asc' ? typeA - typeB : typeB - typeA;
+                return sortOrder === 'asc' ? typeA - typeB : typeB - a.name.localeCompare(b.name);
             }
 
             // If types are the same, apply secondary sorting
@@ -106,7 +107,7 @@ export default function BuildingPage() {
     
     const handleAddLevel = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!levelName.trim() || !levelType || !user || !firestore || !buildingId) {
+        if (!levelName.trim() || !levelType || !user || !firestore || !buildingId || !levels) {
             toast({
                 variant: 'destructive',
                 title: 'Missing fields',
@@ -114,15 +115,38 @@ export default function BuildingPage() {
             });
             return;
         }
-        
-        if (levelType === 'Typical Floor' && (floorNumber === '' || isNaN(Number(floorNumber)))) {
-            toast({
+
+        // Check for uniqueness of level types like 'Ground', 'Rooftop', etc.
+        if (uniqueLevelTypes.includes(levelType) && levels.some(level => level.type === levelType)) {
+             toast({
                 variant: 'destructive',
-                title: 'Invalid Floor Number',
-                description: 'Please provide a valid number for the typical floor.',
+                title: 'Duplicate Level Type',
+                description: `A "${levelType}" level already exists for this building. Only one is allowed.`,
             });
             return;
         }
+        
+        if (levelType === 'Typical Floor') {
+            const numFloor = Number(floorNumber);
+            if (floorNumber === '' || isNaN(numFloor)) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Invalid Floor Number',
+                    description: 'Please provide a valid number for the typical floor.',
+                });
+                return;
+            }
+            // Check if a typical floor with this number already exists
+            if (levels.some(level => level.type === 'Typical Floor' && level.floorNumber === numFloor)) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Duplicate Floor Number',
+                    description: `A "Typical Floor" with the number ${numFloor} already exists.`,
+                });
+                return;
+            }
+        }
+
 
         const newLevelData: Omit<Level, 'id' | 'createdAt'> & { createdAt: any } = {
             name: levelName,
@@ -329,3 +353,5 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    
