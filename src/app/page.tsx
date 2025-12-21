@@ -2,69 +2,76 @@
 'use client';
 
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { useMemo } from 'react';
-import {
-  collection,
-  query,
-  where,
-} from 'firebase/firestore';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { collection, query, where } from 'firebase/firestore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BuildingInfoCard } from '@/components/building-info-card';
+import type { Building } from '@/types';
 
 export default function HomePage() {
   const user = useUser();
   const firestore = useFirestore();
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
 
   const buildingsQuery = useMemo(() => {
     if (!user || !firestore) return null;
-    return query(
-      collection(firestore, 'buildings'),
-      where('ownerId', '==', user.uid)
-    );
+    return query(collection(firestore, 'buildings'), where('ownerId', '==', user.uid));
   }, [user, firestore]);
 
   const { data: buildings } = useCollection(buildingsQuery);
 
+  const selectedBuilding = useMemo(() => {
+    if (!buildings || !selectedBuildingId) return null;
+    return buildings.find(b => b.id === selectedBuildingId) || null;
+  }, [buildings, selectedBuildingId]);
+  
+  const handleBuildingSelect = (buildingId: string) => {
+    setSelectedBuildingId(buildingId);
+  }
 
   if (!user || !firestore) {
-    // AuthProvider handles the redirect, so we can just show a loader or null
     return null;
   }
 
   return (
-    <main className="w-full max-w-2xl mx-auto space-y-8">
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Your Buildings</h2>
-          <div className="space-y-4">
-            {buildings && buildings.length > 0 ? (
-              buildings.map((building) => (
-                <Card key={building.id}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-lg">{building.name}</h3>
-                      <p className="text-muted-foreground text-sm">{building.address}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" asChild>
-                        <Link href={`/building/${building.id}`}>Open</Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="text-center py-12 rounded-lg border border-dashed">
-                <p className="text-muted-foreground">
-                  You haven't added any buildings yet.
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
+    <main className="w-full max-w-4xl mx-auto space-y-8">
+      <div className="flex items-center justify-between">
+         <h2 className="text-2xl font-bold">Building Dashboard</h2>
+         {buildings && buildings.length > 0 && (
+            <Select onValueChange={handleBuildingSelect} value={selectedBuildingId || undefined}>
+                <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder="Select a building to view" />
+                </SelectTrigger>
+                <SelectContent>
+                    {buildings.map(building => (
+                        <SelectItem key={building.id} value={building.id}>
+                            {building.name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+         )}
+      </div>
+
+      <div className="space-y-4">
+        {selectedBuilding ? (
+            <BuildingInfoCard building={selectedBuilding as Building} />
+        ) : (
+          <div className="text-center py-12 rounded-lg border border-dashed">
+            <p className="text-muted-foreground">
+              {buildings && buildings.length > 0
+                ? "Select a building from the dropdown to see its details."
+                : "You haven't added any buildings yet."
+              }
+            </p>
+             {(!buildings || buildings.length === 0) && (
+                 <p className="text-sm text-muted-foreground mt-2">
                     Add a building in the Settings page.
                 </p>
-              </div>
-            )}
+             )}
           </div>
-        </div>
+        )}
+      </div>
     </main>
   );
 }
