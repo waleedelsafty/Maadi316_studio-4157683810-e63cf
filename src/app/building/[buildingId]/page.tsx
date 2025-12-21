@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -391,40 +392,51 @@ export default function BuildingPage() {
                         
                         {sortedLevels && sortedLevels.length > 0 ? (
                             <div className="border rounded-lg">
-                                {sortedLevels.map((level, index) => (
-                                    <div key={level.id} className={`flex items-center justify-between p-3 ${index < sortedLevels.length - 1 ? 'border-b' : ''}`}>
-                                        <div>
-                                            <h3 className="font-semibold">{level.name}</h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                Type: {level.type}
-                                                {level.type === 'Typical Floor' && ` - Floor ${level.floorNumber}`}
-                                            </p>
-                                        </div>
-                                         <div className="flex gap-2">
-                                            <Button variant="outline" size="sm">Edit</Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="destructive" size="sm">Delete</Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This action cannot be undone. This will permanently delete the level
-                                                            "{level.name}" from your building.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteLevel(level.id)}>
-                                                            Continue
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </div>
-                                ))}
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Level Name</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {sortedLevels.map((level) => (
+                                            <TableRow key={level.id}>
+                                                <TableCell className="font-semibold">{level.name}</TableCell>
+                                                <TableCell>
+                                                    {level.type}
+                                                    {level.type === 'Typical Floor' && ` - Floor ${level.floorNumber}`}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex gap-2 justify-end">
+                                                        <Button variant="outline" size="sm">Edit</Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="destructive" size="sm">Delete</Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        This action cannot be undone. This will permanently delete the level
+                                                                        "{level.name}" from your building.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteLevel(level.id)}>
+                                                                        Continue
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             </div>
                         ) : (
                              <div className="text-center py-12 rounded-lg border border-dashed">
