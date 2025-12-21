@@ -2,13 +2,12 @@
 'use client';
 
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   collection,
   addDoc,
   serverTimestamp,
   query,
-  orderBy,
   where,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { EditBuildingSheet } from '@/components/edit-building-sheet';
+import { BuildingFormSheet } from '@/components/building-form-sheet';
 import type { Building } from '@/types';
 import Link from 'next/link';
 
@@ -33,7 +32,6 @@ export default function HomePage() {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, 'users', user.uid, 'notes'),
-      orderBy('createdAt', 'desc')
     );
   }, [user, firestore]);
 
@@ -58,7 +56,8 @@ export default function HomePage() {
       createdAt: serverTimestamp(),
     };
 
-    addDoc(collection(firestore, 'users', user.uid, 'notes'), newNote)
+    const notesCollectionRef = collection(firestore, 'users', user.uid, 'notes');
+    addDoc(notesCollectionRef, newNote)
       .then(() => {
         setNoteText('');
         toast({
@@ -68,7 +67,7 @@ export default function HomePage() {
       })
       .catch((serverError) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `/users/${user.uid}/notes`,
+          path: notesCollectionRef.path,
           operation: 'create',
           requestResourceData: newNote,
         }));
@@ -152,7 +151,7 @@ export default function HomePage() {
           )}
         </div>
         {editingBuilding && (
-            <EditBuildingSheet
+            <BuildingFormSheet
                 building={editingBuilding}
                 isOpen={!!editingBuilding}
                 onOpenChange={(isOpen) => {
