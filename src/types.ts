@@ -22,3 +22,14 @@ export type Level = {
     floorNumber?: number;
     createdAt: any; // Firestore Timestamp
 };
+
+export type Unit = {
+    id: string;
+    unitNumber: string;
+    levelId: string;
+    sqm: number;
+    quarterlyMaintenanceFees: number;
+    ownerName: string;
+    type: 'Office' | 'Commercial' | 'Flat Apartment' | 'Duplex Apartment' | 'Storage';
+    createdAt: any; // Firestore Timestamp
+};

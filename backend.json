@@ -123,6 +123,44 @@
         }
       },
       "required": ["name", "type", "createdAt"]
+    },
+    "Unit": {
+      "title": "Unit",
+      "description": "Represents a single unit within a building.",
+      "type": "object",
+      "properties": {
+        "unitNumber": {
+          "type": "string",
+          "description": "The number or identifier for the unit."
+        },
+        "levelId": {
+          "type": "string",
+          "description": "The ID of the level this unit is on."
+        },
+        "sqm": {
+          "type": "number",
+          "description": "The size of the unit in square meters."
+        },
+        "quarterlyMaintenanceFees": {
+          "type": "number",
+          "description": "The quarterly maintenance fees for the unit."
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "The name of the unit's owner."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of the unit.",
+          "enum": ["Office", "Commercial", "Flat Apartment", "Duplex Apartment", "Storage"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the unit was created."
+        }
+      },
+      "required": ["unitNumber", "levelId", "type", "createdAt"]
     }
   },
   "auth": {
@@ -152,6 +190,12 @@
         "$ref": "#/backend/entities/Level"
       },
       "description": "Stores the levels within a specific building."
+    },
+    "/buildings/{buildingId}/units/{unitId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Unit"
+      },
+      "description": "Stores the units within a specific building."
     }
   }
 }

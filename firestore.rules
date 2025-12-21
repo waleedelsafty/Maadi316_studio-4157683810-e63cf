@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -28,6 +29,11 @@ service cloud.firestore {
 
       // Levels can be read and written by the owner of the parent building
       match /levels/{levelId} {
+        allow read, write: if isOwner(get(/databases/$(database)/documents/buildings/$(buildingId)).data.ownerId);
+      }
+      
+      // Units can be read and written by the owner of the parent building
+      match /units/{unitId} {
         allow read, write: if isOwner(get(/databases/$(database)/documents/buildings/$(buildingId)).data.ownerId);
       }
     }
