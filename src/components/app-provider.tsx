@@ -38,11 +38,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   
   const performFullRecalculation = useCallback((currentSettings: BuildingSettings): Unit[] => {
+    // This function is now purely for calculation and doesn't assume initial data structure.
     const mappedUnits: Unit[] = initialUnitsData.map(u => ({
       ...u,
       net_sqm: u.sqm,
       billing_parent_code: u.parent,
-      type_factor: currentSettings.financials.type_multipliers[u.type as keyof typeof currentSettings.financials.type_multipliers] || 1.0,
+      type_factor: 1.0, // Will be calculated in calculateAreaShares
       share_local_common: 0,
       share_global_common: 0,
       total_gross_sqm: 0,
@@ -57,33 +58,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Defer initialization to the client side to prevent hydration errors.
-    // This ensures that `new Date()` is only called on the client.
-    const clientSideSettings: BuildingSettings = {
-        ...initialSettingsData,
-        financials: {
-            ...initialSettingsData.financials,
-            last_recalculation_date: new Date().toISOString(),
-        }
-    };
-    setSettings(clientSideSettings);
-  }, []);
-
-
-  useEffect(() => {
-    // This effect now only runs when `settings` is first initialized on the client,
-    // or when it's updated by user actions.
-    if (settings) {
+    // Defer ALL initialization logic to the client side inside a single useEffect to prevent hydration errors.
+    const initializeState = () => {
         setLoading(true);
-        const calculatedUnits = performFullRecalculation(settings);
+        // Step 1: Create the initial settings object on the client.
+        const clientSideSettings: BuildingSettings = {
+            ...initialSettingsData,
+            financials: {
+                ...initialSettingsData.financials,
+                last_recalculation_date: new Date().toISOString(),
+            }
+        };
+
+        // Step 2: Perform calculations using these new settings.
+        const calculatedUnits = performFullRecalculation(clientSideSettings);
+        
+        // Step 3: Set both state variables at the same time.
+        setSettings(clientSideSettings);
         setUnits(calculatedUnits);
         setLoading(false);
-    }
-  }, [settings, performFullRecalculation]);
+    };
+    
+    initializeState();
+  }, [performFullRecalculation]);
 
   const updateSettings = (newSettingsPartial: Partial<BuildingSettings>) => {
     setSettings(prevSettings => {
-        if (!prevSettings) return null;
+        if (!prevSettings) return null; // Should not happen with new logic
+        
         const newSettings: BuildingSettings = {
             ...prevSettings,
             ...newSettingsPartial,
@@ -97,6 +99,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 last_recalculation_date: new Date().toISOString(),
             }
         };
+
+        // When settings change, always trigger a full recalculation.
+        const recalculatedUnits = performFullRecalculation(newSettings);
+        setUnits(recalculatedUnits);
+        
         return newSettings;
     });
   };
