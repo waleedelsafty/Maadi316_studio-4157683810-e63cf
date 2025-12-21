@@ -62,8 +62,17 @@ export default function BuildingPage() {
 
     const availableLevelTypes = useMemo(() => {
         if (!levels) return levelTypes;
+
         const existingUniqueTypes = new Set(levels.filter(level => uniqueLevelTypes.includes(level.type)).map(level => level.type));
-        return levelTypes.filter(type => !existingUniqueTypes.has(type));
+        
+        let filteredTypes = levelTypes.filter(type => !existingUniqueTypes.has(type));
+
+        const mezzanineCount = levels.filter(level => level.type === 'Mezzanine').length;
+        if (mezzanineCount >= 2) {
+            filteredTypes = filteredTypes.filter(type => type !== 'Mezzanine');
+        }
+
+        return filteredTypes;
     }, [levels]);
     
     const sortedLevels = useMemo(() => {
@@ -349,7 +358,3 @@ export default function BuildingPage() {
         </main>
     );
 }
-
-    
-
-    
