@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useUser } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp, query, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, query, updateDoc, deleteDoc, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { LevelFormSheet } from '@/components/level-form-sheet';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -35,6 +36,48 @@ const levelTypeOrder: Record<Level['type'], number> = {
     'Ground': 2,
     'Basement': 1,
 };
+
+
+function LevelRow({ level, buildingId, onDelete }: { level: Level; buildingId: string; onDelete: (levelId: string) => void; }) {
+    const firestore = useFirestore();
+
+    const unitsQuery = useMemo(() => {
+        if (!firestore || !buildingId || !level.id) return null;
+        return query(collection(firestore, 'buildings', buildingId, 'units'), where('levelId', '==', level.id));
+    }, [firestore, buildingId, level.id]);
+
+    const { data: units } = useCollection(unitsQuery);
+
+    return (
+        <TableRow>
+            <TableCell className="font-semibold">{level.name}</TableCell>
+            <TableCell>{level.type}{level.type === 'Typical Floor' && ` - Floor ${level.floorNumber}`}</TableCell>
+            <TableCell className="text-center">
+                {units ? units.length : <Skeleton className="h-5 w-5 mx-auto" />}
+            </TableCell>
+            <TableCell className="text-right">
+                <div className="flex gap-2 justify-end">
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={`/building/${buildingId}/level/${level.id}`}>Edit</Link>
+                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild><Button variant="destructive" size="sm">Delete</Button></AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>This will permanently delete the level "{level.name}". All units on this level will also be deleted.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => onDelete(level.id)}>Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            </TableCell>
+        </TableRow>
+    );
+}
 
 
 export default function BuildingPage() {
@@ -336,35 +379,15 @@ export default function BuildingPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Level Name</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Actions</TableHead>
+                                            <TableHead>Level Name</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead className="text-center">Units</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {sortedLevels.map((level) => (
-                                            <TableRow key={level.id}>
-                                                <TableCell className="font-semibold">{level.name}</TableCell>
-                                                <TableCell>{level.type}{level.type === 'Typical Floor' && ` - Floor ${level.floorNumber}`}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex gap-2 justify-end">
-                                                        <Button variant="outline" size="sm" asChild>
-                                                          <Link href={`/building/${buildingId}/level/${level.id}`}>Edit</Link>
-                                                        </Button>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild><Button variant="destructive" size="sm">Delete</Button></AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>This will permanently delete the level "{level.name}". All units on this level will also be deleted.</AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDeleteLevel(level.id)}>Continue</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
+                                            <LevelRow key={level.id} level={level} buildingId={buildingId} onDelete={handleDeleteLevel} />
                                         ))}
                                     </TableBody>
                                 </Table>
