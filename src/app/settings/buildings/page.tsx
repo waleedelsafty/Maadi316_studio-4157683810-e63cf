@@ -21,7 +21,6 @@ export default function BuildingsSettingsPage() {
   const user = useUser();
   const firestore = useFirestore();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
 
   const buildingsQuery = useMemo(() => {
     if (!user || !firestore) return null;
@@ -37,16 +36,12 @@ export default function BuildingsSettingsPage() {
     return null; // Or a loading spinner
   }
 
-  const handleOpenSheet = (building: Building | null = null) => {
-    setEditingBuilding(building);
+  const handleOpenSheet = () => {
     setIsSheetOpen(true);
   }
 
   const handleSheetOpenChange = (isOpen: boolean) => {
     setIsSheetOpen(isOpen);
-    if (!isOpen) {
-      setEditingBuilding(null);
-    }
   }
 
   return (
@@ -56,7 +51,7 @@ export default function BuildingsSettingsPage() {
           <h2 className="text-2xl font-bold">Your Buildings</h2>
           <p className="text-muted-foreground">Manage your building portfolio.</p>
         </div>
-        <Button onClick={() => handleOpenSheet()}>Add Building</Button>
+        <Button onClick={handleOpenSheet}>Add Building</Button>
       </div>
       
       <div className="space-y-4">
@@ -69,7 +64,6 @@ export default function BuildingsSettingsPage() {
                   <p className="text-muted-foreground text-sm">{building.address}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleOpenSheet(building as Building)}>Edit</Button>
                   <Button size="sm" asChild>
                     <Link href={`/building/${building.id}`}>Open</Link>
                   </Button>
@@ -87,7 +81,7 @@ export default function BuildingsSettingsPage() {
       </div>
 
       <BuildingFormSheet
-          building={editingBuilding}
+          building={null} // Always for adding new building now
           isOpen={isSheetOpen}
           onOpenChange={handleSheetOpenChange}
       />

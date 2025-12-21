@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { BuildingFormSheet } from '@/components/building-form-sheet';
 import type { Building } from '@/types';
 import Link from 'next/link';
 
@@ -25,8 +24,6 @@ export default function HomePage() {
   const firestore = useFirestore();
   const [noteText, setNoteText] = useState('');
   const { toast } = useToast();
-  const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
-
 
   const notesQuery = useMemo(() => {
     if (!user || !firestore) return null;
@@ -93,7 +90,6 @@ export default function HomePage() {
                       <p className="text-muted-foreground text-sm">{building.address}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setEditingBuilding(building as Building)}>Edit</Button>
                       <Button size="sm" asChild>
                         <Link href={`/building/${building.id}`}>Open</Link>
                       </Button>
@@ -150,17 +146,6 @@ export default function HomePage() {
             </div>
           )}
         </div>
-        {editingBuilding && (
-            <BuildingFormSheet
-                building={editingBuilding}
-                isOpen={!!editingBuilding}
-                onOpenChange={(isOpen) => {
-                    if (!isOpen) {
-                        setEditingBuilding(null);
-                    }
-                }}
-            />
-        )}
     </main>
   );
 }
