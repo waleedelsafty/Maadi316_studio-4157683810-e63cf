@@ -263,7 +263,7 @@ export default function BuildingPage() {
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4 pt-6">
+                <CardContent className="space-y-2 pt-6">
                      {building ? (
                         <>
                             <InlineEditField
@@ -276,8 +276,8 @@ export default function BuildingPage() {
                                 value={building.address}
                                 onSave={(value) => handleUpdateBuilding('address', value)}
                             />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                                <div className="flex items-center gap-2 rounded-md border p-3">
+                            <div className="grid grid-cols-2 gap-2 pt-4">
+                                <div className="flex items-center gap-2 rounded-md border p-2">
                                     {building.hasBasement ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
                                     <div className="flex-1">
                                         <p className="text-sm font-medium">Basement</p>
@@ -286,7 +286,7 @@ export default function BuildingPage() {
                                         </p>
                                     </div>
                                 </div>
-                                 <div className="flex items-center gap-2 rounded-md border p-3">
+                                 <div className="flex items-center gap-2 rounded-md border p-2">
                                     {building.hasMezzanine ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
                                     <div className="flex-1">
                                         <p className="text-sm font-medium">Mezzanine</p>
@@ -295,7 +295,7 @@ export default function BuildingPage() {
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 rounded-md border p-3">
+                                <div className="flex items-center gap-2 rounded-md border p-2">
                                     {building.hasPenthouse ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
                                     <div className="flex-1">
                                         <p className="text-sm font-medium">Penthouse</p>
@@ -304,7 +304,7 @@ export default function BuildingPage() {
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 rounded-md border p-3">
+                                <div className="flex items-center gap-2 rounded-md border p-2">
                                     {building.hasRooftop ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
                                     <div className="flex-1">
                                         <p className="text-sm font-medium">Rooftop</p>
@@ -390,11 +390,11 @@ export default function BuildingPage() {
                         </div>
                         
                         {sortedLevels && sortedLevels.length > 0 ? (
-                            sortedLevels.map(level => (
-                                <Card key={level.id}>
-                                    <CardContent className="p-4 flex items-center justify-between">
+                            <div className="border rounded-lg">
+                                {sortedLevels.map((level, index) => (
+                                    <div key={level.id} className={`flex items-center justify-between p-3 ${index < sortedLevels.length - 1 ? 'border-b' : ''}`}>
                                         <div>
-                                            <h3 className="font-bold text-lg">{level.name}</h3>
+                                            <h3 className="font-semibold">{level.name}</h3>
                                             <p className="text-sm text-muted-foreground">
                                                 Type: {level.type}
                                                 {level.type === 'Typical Floor' && ` - Floor ${level.floorNumber}`}
@@ -423,9 +423,9 @@ export default function BuildingPage() {
                                                 </AlertDialogContent>
                                             </AlertDialog>
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            ))
+                                    </div>
+                                ))}
+                            </div>
                         ) : (
                              <div className="text-center py-12 rounded-lg border border-dashed">
                                 <p className="text-muted-foreground">
@@ -444,5 +444,4 @@ export default function BuildingPage() {
             />
         </main>
     );
-
-    
+}
