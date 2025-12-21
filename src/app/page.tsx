@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+import { Settings } from 'lucide-react';
 
 export default function HomePage() {
   const user = useUser();
@@ -68,7 +70,7 @@ export default function HomePage() {
 
   if (!user || !firestore) {
     // AuthProvider handles the redirect, so we can just show a loader or null
-    return null; 
+    return null;
   }
 
   return (
@@ -76,12 +78,20 @@ export default function HomePage() {
       <div className="w-full max-w-2xl">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">My Notes</h1>
-          <Button
-            variant="outline"
-            onClick={handleSignOut}
-          >
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" asChild>
+                <Link href="/settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                </Link>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSignOut}
+            >
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <Card className="mb-8">

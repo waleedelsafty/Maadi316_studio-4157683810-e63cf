@@ -17,5 +17,12 @@ service cloud.firestore {
     match /users/{userId}/notes/{noteId} {
       allow read, write: if isOwner(userId);
     }
+
+    // Buildings can be created by any authenticated user.
+    // Only the owner can read or write their own building documents.
+    match /buildings/{buildingId} {
+      allow read, update, delete: if isOwner(resource.data.ownerId);
+      allow create: if request.auth != null;
+    }
   }
 }

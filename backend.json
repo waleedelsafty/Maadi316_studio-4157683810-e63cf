@@ -39,6 +39,31 @@
         }
       },
       "required": ["text", "createdAt"]
+    },
+    "Building": {
+      "title": "Building",
+      "description": "Represents a building created by a super admin.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the building."
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical address of the building."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who owns the building."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the building was created."
+        }
+      },
+      "required": ["name", "address", "ownerId", "createdAt"]
     }
   },
   "auth": {
@@ -56,6 +81,12 @@
         "$ref": "#/backend/entities/Note"
       },
       "description": "Stores the notes created by a specific user."
+    },
+    "/buildings/{buildingId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Building"
+      },
+      "description": "Stores building information."
     }
   }
 }
