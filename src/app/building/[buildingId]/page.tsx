@@ -280,7 +280,7 @@ export default function BuildingPage() {
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-2 pt-6">
+                <CardContent className="space-y-4">
                      {building ? (
                         <>
                             <InlineEditField
@@ -293,7 +293,7 @@ export default function BuildingPage() {
                                 value={building.address}
                                 onSave={(value) => handleUpdateBuilding('address', value)}
                             />
-                            <div className="grid grid-cols-2 gap-2 pt-4">
+                            <div className="grid grid-cols-2 gap-2 pt-2">
                                 <div className="flex items-center gap-2 rounded-md border p-2">
                                     {building.hasBasement ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}
                                     <div className="flex-1">
@@ -483,3 +483,5 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    
