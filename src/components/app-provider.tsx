@@ -79,6 +79,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
     };
     
+    // We only run this on the client, after the component has mounted.
     initializeState();
   }, [performFullRecalculation]);
 
@@ -109,12 +110,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   
   const recalculateFees = (newBudgetOrRate: number) => {
+     if (!settings) return;
      updateSettings({
         financials: {
-            ...(settings?.financials ?? initialSettingsData.financials),
-            calculation_method: settings?.financials.calculation_method === 'budget_based' ? 'budget_based' : 'rate_based',
-            current_annual_budget: settings?.financials.calculation_method === 'budget_based' ? newBudgetOrRate : settings!.financials.current_annual_budget,
-            rate_per_sqm: settings?.financials.calculation_method === 'rate_based' ? newBudgetOrRate : settings!.financials.rate_per_sqm,
+            ...settings.financials,
+            calculation_method: settings.financials.calculation_method === 'budget_based' ? 'budget_based' : 'rate_based',
+            current_annual_budget: settings.financials.calculation_method === 'budget_based' ? newBudgetOrRate : settings.financials.current_annual_budget,
+            rate_per_sqm: settings.financials.calculation_method === 'rate_based' ? newBudgetOrRate : settings.financials.rate_per_sqm,
         }
     });
   };
