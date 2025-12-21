@@ -1,7 +1,6 @@
 'use client';
 
-import { app } from '@/lib/firebase/config';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import React, {
   createContext,
   useContext,
@@ -9,27 +8,67 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { app } from '@/lib/firebase/config';
+import { usePathname, useRouter } from 'next/navigation';
 
-export const AuthContext = createContext<{ user: User | null }>({
+export const AuthContext = createContext<{ 
+  user: User | null;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+}>({
   user: null,
+  signInWithGoogle: async () => {},
+  signOut: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const auth = getAuth(app);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // onAuthStateChanged is the recommended way to get the current user.
-    // It automatically handles the result of a redirect login when the page loads.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      if (user && pathname === '/login') {
+        router.push('/');
+      } else if (!user && pathname !== '/login') {
+        router.push('/login');
+      }
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, [auth]);
+  }, [auth, pathname, router]);
 
-  const value = useMemo(() => ({ user }), [user]);
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle the redirect
+    } catch (error) {
+      console.error('Error signing in with Google', error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      // onAuthStateChanged will handle the redirect
+    } catch (error) {
+      console.error('Error signing out', error);
+    }
+  }
+
+  const value = useMemo(() => ({ 
+    user,
+    signInWithGoogle,
+    signOut: handleSignOut
+  }), [user, auth]);
+
+  // Render children only when auth state is determined to avoid flash of content
+  if (user === null && pathname !== '/login') {
+    return null; // or a loading spinner
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

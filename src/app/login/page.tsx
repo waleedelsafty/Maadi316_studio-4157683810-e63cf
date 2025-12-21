@@ -1,38 +1,29 @@
 'use client';
 
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-} from 'firebase/auth';
-import { app } from '@/lib/firebase/config';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const auth = getAuth(app);
+  const { user, signInWithGoogle } = useAuth();
   const router = useRouter();
-  const { user } = useAuth();
 
+  // This effect will run when the user state changes.
+  // The redirect is now primarily handled by the AuthProvider,
+  // but this is a good secondary check.
   useEffect(() => {
     if (user) {
       router.push('/');
     }
   }, [user, router]);
 
-  const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      // After successful popup sign-in, the onAuthStateChanged
-      // in AuthProvider will detect the user and redirect.
-    } catch (error) {
-      console.error('Error signing in with Google', error);
-    }
-  };
 
+  // If the user object is loading, we can show a blank screen to prevent flicker
+  if (user === undefined) {
+    return null;
+  }
+  
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="p-8 border rounded-lg shadow-md max-w-sm w-full text-center">

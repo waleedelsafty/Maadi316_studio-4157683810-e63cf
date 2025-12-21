@@ -11,7 +11,6 @@ import {
   query,
   onSnapshot,
   orderBy,
-  where,
   Query,
   DocumentData,
 } from 'firebase/firestore';
@@ -42,16 +41,9 @@ function useCollection<T>(q: Query<T, DocumentData> | null) {
 }
 
 export default function HomePage() {
-  const { user } = useAuth();
-  const router = useRouter();
+  const { user, signOut } = useAuth();
   const [noteText, setNoteText] = useState('');
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/login');
-    }
-  }, [user, router]);
 
   const notesQuery = useMemo(() => {
     if (!user) return null;
@@ -88,7 +80,8 @@ export default function HomePage() {
   };
 
   if (!user) {
-    return null;
+    // AuthProvider handles the redirect, so we can just show a loader or null
+    return null; 
   }
 
   return (
@@ -98,10 +91,7 @@ export default function HomePage() {
           <h1 className="text-4xl font-bold">My Notes</h1>
           <Button
             variant="outline"
-            onClick={() => {
-              // This is a placeholder for a real sign-out function
-              router.push('/login');
-            }}
+            onClick={signOut}
           >
             Sign Out
           </Button>
