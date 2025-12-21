@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useUser, useFirestore, useAuth, useCollection } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
 import { useEffect, useState, useMemo } from 'react';
 import {
   collection,
@@ -9,6 +9,7 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  where,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,17 @@ export default function HomePage() {
   }, [user, firestore]);
 
   const { data: notes } = useCollection(notesQuery);
+
+  const buildingsQuery = useMemo(() => {
+    if (!user || !firestore) return null;
+    return query(
+      collection(firestore, 'buildings'),
+      where('ownerId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+  }, [user, firestore]);
+
+  const { data: buildings } = useCollection(buildingsQuery);
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +73,39 @@ export default function HomePage() {
   }
 
   return (
-    <main className="w-full max-w-2xl mx-auto">
-        <Card className="mb-8">
+    <main className="w-full max-w-2xl mx-auto space-y-8">
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Your Buildings</h2>
+          <div className="space-y-4">
+            {buildings && buildings.length > 0 ? (
+              buildings.map((building) => (
+                <Card key={building.id}>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-lg">{building.name}</h3>
+                      <p className="text-muted-foreground text-sm">{building.address}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">Edit</Button>
+                      <Button size="sm">Open</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="text-center py-12 rounded-lg border border-dashed">
+                <p className="text-muted-foreground">
+                  You haven't added any buildings yet.
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                    Add a building in the Settings page.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <Card>
           <CardHeader>
             <CardTitle>Add a New Note</CardTitle>
           </CardHeader>
@@ -81,6 +124,7 @@ export default function HomePage() {
         </Card>
 
         <div className="space-y-4">
+          <h2 className="text-2xl font-bold mb-4">Your Notes</h2>
           {notes && notes.length > 0 ? (
             notes.map((note) => (
               <Card key={note.id}>
