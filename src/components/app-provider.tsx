@@ -57,7 +57,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Defer ALL initialization logic to the client side inside a single useEffect to prevent hydration errors.
+    // This function now only runs on the client-side, after the initial render.
+    // This prevents any hydration mismatch errors.
     const initializeState = () => {
         setLoading(true);
         // Step 1: Create the initial settings object on the client.
