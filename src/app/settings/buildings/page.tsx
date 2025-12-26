@@ -21,7 +21,7 @@ function BuildingRow({ building }: { building: Building }) {
     const firestore = useFirestore();
 
     const levelsQuery = useMemo(() => {
-        if (!firestore) return null;
+        if (!firestore || !building.id) return null; // Guard against missing building.id
         return query(collection(firestore, 'buildings', building.id, 'levels'));
     }, [firestore, building.id]);
 
@@ -49,7 +49,7 @@ function BuildingRow({ building }: { building: Building }) {
         )
     }
 
-    if (!levels) {
+    if (!building.id || !levels) {
          return (
             <TableRow>
                 <TableCell className="font-medium">
