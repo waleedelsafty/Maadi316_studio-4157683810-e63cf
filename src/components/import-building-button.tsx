@@ -62,10 +62,10 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 
                 buildingData = restOfBuilding;
                 levelsData = levels || [];
-                // Find original level name for units from the imported levels array
-                unitsData = (units || []).map((u: Unit) => {
-                    const level = (levelsData as (Level & { id: string})[]).find(l => l.id === u.levelId);
-                    const { id, levelId, createdAt, ...restOfUnit } = u;
+                // Map units to their original level name for later linking
+                unitsData = (units || []).map((unit: Unit) => {
+                    const level = (levelsData as (Level & { id: string})[]).find(l => l.id === unit.levelId);
+                    const { id: unitId, levelId, createdAt: unitCreatedAt, ...restOfUnit } = unit;
                     return { ...restOfUnit, originalLevelName: level?.name };
                 });
 
@@ -75,19 +75,22 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 // Parse Building Info
                 const buildingSheet = workbook.Sheets['Building Info'];
                 if (!buildingSheet) throw new Error("Missing 'Building Info' worksheet in the Excel file.");
-                const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet, {header: 1});
+                const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet);
                 
-                const infoMap = new Map(buildingInfoJson.map(row => [row[0], row[1]]));
+                const infoMap = buildingInfoJson.reduce((acc, row) => {
+                    acc[row.Key] = row.Value;
+                    return acc;
+                }, {} as { [key: string]: any });
 
                 buildingData = {
-                    name: infoMap.get('Building Name'),
-                    address: infoMap.get('Address'),
-                    hasBasement: String(infoMap.get('Has Basement')).startsWith('Yes'),
-                    basementCount: String(infoMap.get('Has Basement')).startsWith('Yes') ? parseInt(String(infoMap.get('Has Basement')).match(/\((\d+)/)?.[1] || '1', 10) : undefined,
-                    hasMezzanine: String(infoMap.get('Has Mezzanine')).startsWith('Yes'),
-                    mezzanineCount: String(infoMap.get('Has Mezzanine')).startsWith('Yes') ? parseInt(String(infoMap.get('Has Mezzanine')).match(/\((\d+)/)?.[1] || '1', 10) : undefined,
-                    hasPenthouse: infoMap.get('Has Penthouse') === 'Yes',
-                    hasRooftop: infoMap.get('Has Rooftop') === 'Yes',
+                    name: infoMap['Building Name'],
+                    address: infoMap['Address'],
+                    hasBasement: String(infoMap['Has Basement']).startsWith('Yes'),
+                    basementCount: String(infoMap['Has Basement']).startsWith('Yes') ? parseInt(String(infoMap['Has Basement']).match(/\((\d+)/)?.[1] || '1', 10) : undefined,
+                    hasMezzanine: String(infoMap['Has Mezzanine']).startsWith('Yes'),
+                    mezzanineCount: String(infoMap['Has Mezzanine']).startsWith('Yes') ? parseInt(String(infoMap['Has Mezzanine']).match(/\((\d+)/)?.[1] || '1', 10) : undefined,
+                    hasPenthouse: infoMap['Has Penthouse'] === 'Yes',
+                    hasRooftop: infoMap['Has Rooftop'] === 'Yes',
                 };
 
 
