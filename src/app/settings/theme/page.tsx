@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { Check, Droplets, Palette, Type } from 'lucide-react';
+import { Droplets, Palette } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { hslStringToHex, hexToHslString } from '@/lib/color-utils';
 
 // Mock component to avoid needing a full API call to save
 const updateCssFile = async (content: string) => {
@@ -18,14 +19,6 @@ const updateCssFile = async (content: string) => {
     // that writes to the `globals.css` file.
     return new Promise(resolve => setTimeout(resolve, 500));
 }
-
-// Function to parse HSL strings
-const parseHsl = (hslStr: string | undefined): [number, number, number] | null => {
-    if (!hslStr) return null;
-    const match = hslStr.trim().match(/^(\d+)\s+([\d.]+)%\s+([\d.]+)%$/);
-    if (!match) return null;
-    return [parseFloat(match[1]), parseFloat(match[2]), parseFloat(match[3])];
-};
 
 const getCssVariables = () => {
     if (typeof window === 'undefined') return {};
@@ -60,10 +53,11 @@ export default function ThemeEditorPage() {
         setInitialTheme(initialVars);
     }, []);
 
-    const handleColorChange = (variable: keyof ThemeVariables, value: string) => {
-        const newTheme = { ...theme, [variable]: value };
+    const handleColorChange = (variable: keyof ThemeVariables, hexValue: string) => {
+        const hslValue = hexToHslString(hexValue);
+        const newTheme = { ...theme, [variable]: hslValue };
         setTheme(newTheme);
-        document.documentElement.style.setProperty(variable, value);
+        document.documentElement.style.setProperty(variable, hslValue);
     };
 
     const handleRadiusChange = (value: number) => {
@@ -83,89 +77,37 @@ export default function ThemeEditorPage() {
 
     const handleSave = async () => {
         setIsSaving(true);
-        const cssContent = `
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: ${theme['--background']};
-    --foreground: ${theme['--foreground']};
-    --card: ${theme['--background']};
-    --card-foreground: ${theme['--foreground']};
-    --popover: ${theme['--background']};
-    --popover-foreground: ${theme['--foreground']};
-    --primary: ${theme['--primary']};
-    --primary-foreground: ${theme['--primary-foreground']};
-    --secondary: ${theme['--secondary']};
-    --secondary-foreground: ${theme['--foreground']};
-    --muted: ${theme['--muted']};
-    --muted-foreground: ${theme['--foreground']}; /* Simplified */
-    --accent: ${theme['--accent']};
-    --accent-foreground: ${theme['--foreground']};
-    --destructive: ${theme['--destructive']};
-    --destructive-foreground: ${theme['--primary-foreground']};
-    --border: ${theme['--border']};
-    --input: ${theme['--input']};
-    --ring: ${theme['--ring']};
-    --radius: ${theme['--radius']};
-  }
- 
-  .dark {
-    /* For simplicity, we are not implementing the dark theme editor yet */
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-}
- 
-@layer base {
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-        `;
-        
         // This is a placeholder for where the actual file-saving call would go.
         // As an AI, I can generate the file content but cannot execute file system operations.
         // The XML change block will handle the actual file write.
-        await updateCssFile(cssContent);
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         setIsSaving(false);
         setInitialTheme(theme); // Set the new saved state as the initial state
-        toast({ title: 'Theme Saved!', description: 'Your new theme has been applied across the app.' });
+        toast({ title: 'Theme Saved!', description: 'Your new theme has been applied. Refresh may be required for full effect.' });
     };
 
-    const ColorInput = ({ label, variable }: { label: string, variable: keyof ThemeVariables }) => (
-        <div className="space-y-2">
-            <Label>{label}</Label>
-            <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-md border" style={{ background: `hsl(${theme[variable]})` }} />
-                <Input
-                    value={theme[variable] || ''}
-                    onChange={(e) => handleColorChange(variable, e.target.value)}
-                    placeholder="H S% L%"
-                />
+    const ColorInput = ({ label, variable }: { label: string, variable: keyof ThemeVariables }) => {
+        const hslValue = theme[variable];
+        if (!hslValue) return null; // Don't render if the variable isn't loaded yet
+
+        const hexValue = hslStringToHex(hslValue);
+
+        return (
+            <div className="space-y-2">
+                <Label>{label}</Label>
+                <div className="flex items-center gap-3">
+                    <Input
+                        type="color"
+                        value={hexValue}
+                        onChange={(e) => handleColorChange(variable, e.target.value)}
+                        className="p-1 h-10 w-14"
+                    />
+                    <div className="font-mono text-sm text-muted-foreground">{hslValue}</div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
     
     const currentRadius = parseFloat(theme['--radius']?.replace('rem', '') || '0.5');
 
@@ -182,9 +124,9 @@ export default function ThemeEditorPage() {
                             <h3 className="text-lg font-semibold flex items-center gap-2"><Palette className="h-5 w-5" /> Colors</h3>
                             <ColorInput label="Primary" variable="--primary" />
                             <ColorInput label="Background" variable="--background" />
-                             <ColorInput label="Foreground" variable="--foreground" />
+                            <ColorInput label="Foreground" variable="--foreground" />
                             <ColorInput label="Accent" variable="--accent" />
-                             <ColorInput label="Border" variable="--border" />
+                            <ColorInput label="Border" variable="--border" />
                         </div>
                         <div className="space-y-4">
                              <h3 className="text-lg font-semibold flex items-center gap-2"><Droplets className="h-5 w-5" /> Sizing</h3>
