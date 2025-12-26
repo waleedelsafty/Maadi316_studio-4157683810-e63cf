@@ -128,8 +128,9 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
 
   React.useEffect(() => {
     if (isOpen) {
+      const buildingName = (building as any)?.Building_name || (building as any)?.name || '';
       reset({
-        Building_name: (building as any)?.Building_name || (building as any)?.name || '',
+        Building_name: buildingName,
         address: building?.address || '',
         hasBasement: building?.hasBasement || false,
         basementCount: building?.basementCount || 1,
@@ -228,7 +229,7 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
                                 <Select onValueChange={(val) => field.onChange(Number(val))} defaultValue={String(field.value)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select number of levels" />
-                                    </Trigger>
+                                    </SelectTrigger>
                                     <SelectContent>
                                         {[1, 2, 3, 4].map(num => <SelectItem key={num} value={String(num)}>{num}</SelectItem>)}
                                     </SelectContent>
