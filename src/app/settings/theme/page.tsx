@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { Check, Droplets, Palette } from 'lucide-react';
+import { Check, Droplets, Palette, Type } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Mock component to avoid needing a full API call to save
@@ -182,6 +182,7 @@ export default function ThemeEditorPage() {
                             <h3 className="text-lg font-semibold flex items-center gap-2"><Palette className="h-5 w-5" /> Colors</h3>
                             <ColorInput label="Primary" variable="--primary" />
                             <ColorInput label="Background" variable="--background" />
+                             <ColorInput label="Foreground" variable="--foreground" />
                             <ColorInput label="Accent" variable="--accent" />
                              <ColorInput label="Border" variable="--border" />
                         </div>
@@ -254,4 +255,3 @@ export default function ThemeEditorPage() {
         </main>
     );
 }
-
