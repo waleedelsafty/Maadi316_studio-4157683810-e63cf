@@ -62,6 +62,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         }
         return 'Building Details';
     }
+    if (pathname === '/settings/buildings') return 'My Buildings';
     if (pathname.startsWith('/settings')) return 'Settings';
     return 'Dashboard';
   }
@@ -116,7 +117,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
              <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
-                  isActive={pathname.startsWith('/settings')}
+                  isActive={pathname.startsWith('/settings') && pathname !== '/settings/buildings'}
                   tooltip="Settings"
                 >
                     <Link href="/settings">

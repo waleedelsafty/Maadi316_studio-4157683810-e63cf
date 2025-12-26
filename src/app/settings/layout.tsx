@@ -9,7 +9,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const tabs = [
     { name: 'General', href: '/settings/general' },
-    { name: 'Buildings', href: '/settings/buildings' },
     { name: 'Theme', href: '/settings/theme' },
     { name: 'Recycle Bin', href: '/settings/recycle-bin' },
 ]
@@ -20,6 +19,13 @@ export default function SettingsLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+
+  // Redirect from /settings/buildings to the standalone page
+  const router = useRouter();
+  if (pathname === '/settings/buildings') {
+      router.replace('/settings/buildings');
+  }
+
 
   return (
     <main className="w-full space-y-6">
