@@ -162,7 +162,7 @@ function BuildingRow({ building }: { building: Building }) {
 }
 
 
-export default function BuildingsSettingsPage() {
+export default function BuildingsPage() {
   const user = useUser();
   const firestore = useFirestore();
   const [isSheetOpen, setIsSheetOpen] = useState(false);

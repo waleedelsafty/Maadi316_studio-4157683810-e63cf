@@ -62,7 +62,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         }
         return 'Building Details';
     }
-    if (pathname === '/settings/buildings') return 'My Buildings';
+    if (pathname === '/buildings') return 'My Buildings';
     if (pathname.startsWith('/settings')) return 'Settings';
     return 'Dashboard';
   }
@@ -105,10 +105,10 @@ export function MainNav({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
-                  isActive={pathname === '/settings/buildings'}
+                  isActive={pathname === '/buildings'}
                   tooltip="My Buildings"
                 >
-                    <Link href="/settings/buildings">
+                    <Link href="/buildings">
                         <Building />
                         <span>My Buildings</span>
                     </Link>
@@ -117,7 +117,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
              <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
-                  isActive={pathname.startsWith('/settings') && pathname !== '/settings/buildings'}
+                  isActive={pathname.startsWith('/settings')}
                   tooltip="Settings"
                 >
                     <Link href="/settings">

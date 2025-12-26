@@ -1,7 +1,7 @@
 
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,13 +19,6 @@ export default function SettingsLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-
-  // Redirect from /settings/buildings to the standalone page
-  const router = useRouter();
-  if (pathname === '/settings/buildings') {
-      router.replace('/settings/buildings');
-  }
-
 
   return (
     <main className="w-full space-y-6">
