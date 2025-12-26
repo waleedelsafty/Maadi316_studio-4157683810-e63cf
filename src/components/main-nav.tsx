@@ -60,6 +60,9 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         if (pathname.includes('/level/')) {
             return 'Level Details';
         }
+        if (pathname.includes('/unit/')) {
+            return 'Edit Unit';
+        }
         return 'Building Details';
     }
     if (pathname === '/buildings') return 'My Buildings';
@@ -157,3 +160,5 @@ export function MainNav({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    
