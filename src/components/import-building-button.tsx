@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
 import type { Building, Level, Unit } from '@/types';
 import { Upload } from 'lucide-react';
 
@@ -55,9 +55,10 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
 
             if (format === 'json') {
                 const data = JSON.parse(fileContent as string);
-                buildingData = data;
-                levelsData = data.levels || [];
-                unitsData = data.units || [];
+                const { levels, units, ...restOfBuilding } = data;
+                buildingData = restOfBuilding;
+                levelsData = levels || [];
+                unitsData = (units || []).map((u: any) => ({ ...u, originalLevelName: levels.find((l: any) => l.id === u.levelId)?.name }));
             } else { // xlsx
                 const workbook = XLSX.read(fileContent as ArrayBuffer, { type: 'buffer' });
                 
