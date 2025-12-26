@@ -194,7 +194,7 @@ export default function BuildingsSettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Your Buildings</h2>
@@ -238,7 +238,7 @@ export default function BuildingsSettingsPage() {
                     <TableHead className="text-center">Ground</TableHead>
                     <TableHead className="text-center">Typical Floors</TableHead>
                     <TableHead className="text-center">Penthouse</TableHead>
-                    <TableHead className="text-center">Rooftop</TableHead>
+                    <TableHead className="text-right">Rooftop</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>

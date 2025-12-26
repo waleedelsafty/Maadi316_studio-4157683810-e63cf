@@ -62,11 +62,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         }
         return 'Building Details';
     }
-    if (pathname === '/settings/general') return 'General Settings';
-    if (pathname === '/settings/buildings') return 'My Buildings';
-    if (pathname === '/settings/recycle-bin') return 'Recycle Bin';
-    if (pathname === '/settings/theme') return 'Theme Editor';
-    if (pathname === '/settings/css-overrides') return 'CSS Overrides';
+    if (pathname.startsWith('/settings')) return 'Settings';
     return 'Dashboard';
   }
 
@@ -120,34 +116,10 @@ export function MainNav({ children }: { children: React.ReactNode }) {
              <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
-                  isActive={pathname === '/settings/recycle-bin'}
-                  tooltip="Recycle Bin"
-                >
-                    <Link href="/settings/recycle-bin">
-                        <Trash2 />
-                        <span>Recycle Bin</span>
-                    </Link>
-                </SidebarMenuButton>
-             </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild
-                  isActive={pathname.startsWith('/settings/theme')}
-                  tooltip="Theme"
-                >
-                    <Link href="/settings/theme">
-                        <Palette />
-                        <span>Theme</span>
-                    </Link>
-                </SidebarMenuButton>
-             </SidebarMenuItem>
-             <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild
-                  isActive={pathname.startsWith('/settings/general')}
+                  isActive={pathname.startsWith('/settings')}
                   tooltip="Settings"
                 >
-                    <Link href="/settings/general">
+                    <Link href="/settings">
                         <Settings />
                         <span>Settings</span>
                     </Link>
