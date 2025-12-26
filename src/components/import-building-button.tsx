@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRef, useState } from 'react';
@@ -55,48 +56,40 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
 
             if (format === 'json') {
                 const data = JSON.parse(fileContent as string);
-                // Specifically extract building properties, ignoring old id, ownerId etc.
-                buildingData = {
-                    name: data.name,
-                    address: data.address,
-                    hasBasement: data.hasBasement,
-                    basementCount: data.basementCount,
-                    hasMezzanine: data.hasMezzanine,
-                    mezzanineCount: data.mezzanineCount,
-                    hasPenthouse: data.hasPenthouse,
-                    hasRooftop: data.hasRooftop,
-                    floors: data.floors,
-                    units: data.units,
-                };
-                levelsData = data.levels || [];
+                
+                // Correctly separate building properties from levels and units
+                const { levels, units, id, ownerId, createdAt, ...restOfBuilding } = data;
+                
+                buildingData = restOfBuilding;
+                levelsData = levels || [];
                 // Find original level name for units from the imported levels array
-                unitsData = (data.units || []).map((u: any) => {
-                    const level = (levelsData as (Level & { id: string})[]).find((l: any) => l.id === u.levelId);
-                    return { ...u, originalLevelName: level?.name };
+                unitsData = (units || []).map((u: Unit) => {
+                    const level = (levelsData as (Level & { id: string})[]).find(l => l.id === u.levelId);
+                    const { id, levelId, createdAt, ...restOfUnit } = u;
+                    return { ...restOfUnit, originalLevelName: level?.name };
                 });
+
             } else { // xlsx
                 const workbook = XLSX.read(fileContent as ArrayBuffer, { type: 'buffer' });
                 
                 // Parse Building Info
                 const buildingSheet = workbook.Sheets['Building Info'];
                 if (!buildingSheet) throw new Error("Missing 'Building Info' worksheet in the Excel file.");
-                const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet);
+                const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet, {header: 1});
+                
+                const infoMap = new Map(buildingInfoJson.map(row => [row[0], row[1]]));
 
-                buildingData = buildingInfoJson.reduce((obj: any, item) => {
-                    if (item['Key'] === 'Building Name') obj.name = item['Value'];
-                    if (item['Key'] === 'Address') obj.address = item['Value'];
-                    if (item['Key'] === 'Has Basement') {
-                        obj.hasBasement = String(item['Value']).startsWith('Yes');
-                        if (obj.hasBasement) obj.basementCount = parseInt(String(item['Value']).match(/\((\d+)/)?.[1] || 1, 10);
-                    }
-                    if (item['Key'] === 'Has Mezzanine') {
-                        obj.hasMezzanine = String(item['Value']).startsWith('Yes');
-                         if (obj.hasMezzanine) obj.mezzanineCount = parseInt(String(item['Value']).match(/\((\d+)/)?.[1] || 1, 10);
-                    }
-                    if (item['Key'] === 'Has Penthouse') obj.hasPenthouse = item['Value'] === 'Yes';
-                    if (item['Key'] === 'Has Rooftop') obj.hasRooftop = item['Value'] === 'Yes';
-                    return obj;
-                }, {});
+                buildingData = {
+                    name: infoMap.get('Building Name'),
+                    address: infoMap.get('Address'),
+                    hasBasement: String(infoMap.get('Has Basement')).startsWith('Yes'),
+                    basementCount: String(infoMap.get('Has Basement')).startsWith('Yes') ? parseInt(String(infoMap.get('Has Basement')).match(/\((\d+)/)?.[1] || '1', 10) : undefined,
+                    hasMezzanine: String(infoMap.get('Has Mezzanine')).startsWith('Yes'),
+                    mezzanineCount: String(infoMap.get('Has Mezzanine')).startsWith('Yes') ? parseInt(String(infoMap.get('Has Mezzanine')).match(/\((\d+)/)?.[1] || '1', 10) : undefined,
+                    hasPenthouse: infoMap.get('Has Penthouse') === 'Yes',
+                    hasRooftop: infoMap.get('Has Rooftop') === 'Yes',
+                };
+
 
                 // Parse Levels
                 const levelsSheet = workbook.Sheets['Levels'];
@@ -191,3 +184,5 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
         </>
     );
 }
+
+    
