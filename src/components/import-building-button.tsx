@@ -41,22 +41,25 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                     format = 'json';
                 } else if (file.name.endsWith('.xlsx')) {
                     const workbook = XLSX.read(result, { type: 'array' });
-                    // For excel, we construct a similar object to the JSON export
                     const buildingInfoSheet = workbook.Sheets['Building Info'];
                     const levelsSheet = workbook.Sheets['Levels'];
                     const unitsSheet = workbook.Sheets['Units'];
 
-                    const buildingInfo = XLSX.utils.sheet_to_json<{ Key: string, Value: any }>(buildingInfoSheet);
+                    if (!buildingInfoSheet) {
+                         throw new Error("Could not find the 'Building Info' sheet in the Excel file.");
+                    }
+
+                    const buildingInfo = XLSX.utils.sheet_to_json(buildingInfoSheet) as Array<{ Key: string; Value: any }>;
                     const buildingData: {[key: string]: any} = {};
                     buildingInfo.forEach(row => {
                          if (row.Key === 'Building Name') buildingData['Building_name'] = row.Value;
-                         if (row.Key === 'Address') buildingData['address'] = row.Value;
-                         if (row.Key === 'Has Basement') buildingData['hasBasement'] = row.Value?.startsWith('Yes');
-                         if (row.Key === 'Has Mezzanine') buildingData['hasMezzanine'] = row.Value?.startsWith('Yes');
-                         if (row.Key === 'Has Penthouse') buildingData['hasPenthouse'] = row.Value?.startsWith('Yes');
-                         if (row.Key === 'Has Rooftop') buildingData['hasRooftop'] = row.Value?.startsWith('Yes');
-                         if (row.Value?.includes('level/s')) {
-                            const count = parseInt(row.Value.match(/\((\d+)/)?.[1] || '1', 10);
+                         else if (row.Key === 'Address') buildingData['address'] = row.Value;
+                         else if (row.Key === 'Has Basement') buildingData['hasBasement'] = row.Value?.startsWith('Yes');
+                         else if (row.Key === 'Has Mezzanine') buildingData['hasMezzanine'] = row.Value?.startsWith('Yes');
+                         else if (row.Key === 'Has Penthouse') buildingData['hasPenthouse'] = row.Value === 'Yes';
+                         else if (row.Key === 'Has Rooftop') buildingData['hasRooftop'] = row.Value === 'Yes';
+                         else if (row.Value?.toString().includes('level/s')) {
+                            const count = parseInt(row.Value.toString().match(/\((\d+)/)?.[1] || '1', 10);
                             if (row.Key === 'Has Basement') buildingData['basementCount'] = count;
                             if (row.Key === 'Has Mezzanine') buildingData['mezzanineCount'] = count;
                          }
@@ -90,7 +93,6 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
             reader.readAsArrayBuffer(file);
         }
 
-
         if(fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -107,16 +109,17 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
             const importedData = importSessionData.data;
 
             if (!importedData) {
-                 throw new Error("Imported file appears to be empty or corrupted.");
+                throw new Error("Imported file appears to be empty or corrupted.");
             }
-            if (!importedData.Building_name) {
-                throw new Error("Could not find 'Building_name' in the imported file.");
+
+            const { levels: importedLevels, units: importedUnits, id, ownerId, createdAt, floors, units, ...buildingCore } = importedData;
+            
+            let finalBuildingName = buildingCore.Building_name || buildingCore.name;
+
+            if (!finalBuildingName) {
+                throw new Error("Could not find 'Building_name' or 'name' in the imported file.");
             }
             
-            // --- Data processing and Firestore writing ---
-            const { levels, units, id, ownerId, createdAt, ...buildingCore } = importedData;
-            
-            let finalBuildingName = buildingCore.Building_name;
             const existingNames = new Set((existingBuildings || []).map(b => b.Building_name || (b as any).name));
             if (existingNames.has(finalBuildingName)) {
                 const date = new Date().toISOString().split('T')[0];
@@ -133,51 +136,51 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
             const newBuildingRef = await addDoc(collection(firestore, 'buildings'), newBuildingDocData);
             const newBuildingId = newBuildingRef.id;
             
-            toast({ title: 'Import Successful', description: `Building "${finalBuildingName}" shell created.` });
+            toast({ title: 'Import Step 1/3 Complete', description: `Building "${finalBuildingName}" created.` });
 
-            // Now, import levels and units if they exist
-            if ((levels && levels.length > 0) || (units && units.length > 0)) {
-                const batch = writeBatch(firestore);
-                const levelIdMap = new Map<string, string>(); // Maps old level name to new level ID
+            // Batch import levels
+            const oldLevelIdToNewLevelIdMap = new Map<string, string>();
+            const originalLevels = importedLevels as any[] || [];
 
-                if (levels && levels.length > 0) {
-                    for (const level of levels) {
-                        const { id: oldLevelId, ...levelData } = level;
-                        const newLevelRef = doc(collection(firestore, 'buildings', newBuildingId, 'levels'));
-                        batch.set(newLevelRef, { ...levelData, createdAt: serverTimestamp() });
-                        
-                        // Use level name as the key, as it's the most stable identifier we have during import
-                        if (level.name) {
-                            levelIdMap.set(level.name, newLevelRef.id);
-                        }
-                    }
-                }
+            if (originalLevels.length > 0) {
+                const levelBatch = writeBatch(firestore);
                 
-                await batch.commit(); // Commit levels first to get their IDs
-
-                // Now commit units in a new batch
-                if (units && units.length > 0 && levelIdMap.size > 0) {
-                    const unitBatch = writeBatch(firestore);
-                    const levelsMapByName = new Map(levels.map((l: any) => [l['Level Name'] || l.name, l]));
+                originalLevels.forEach(level => {
+                    const { id: oldLevelId, ...levelData } = level;
+                    const newLevelRef = doc(collection(firestore, 'buildings', newBuildingId, 'levels'));
                     
-                    for (const unit of units) {
-                        const { id: oldUnitId, ...unitData } = unit;
-                        const levelName = importSessionData.format === 'xlsx' ? (unit as any)['Level'] : levelsMapByName.get((unit as any).levelId)?.name;
-                        const newLevelId = levelIdMap.get(levelName);
-                        
-                        if (newLevelId) {
-                            const newUnitRef = doc(collection(firestore, 'buildings', newBuildingId, 'units'));
-                            unitBatch.set(newUnitRef, {
-                                ...unitData,
-                                levelId: newLevelId,
-                                createdAt: serverTimestamp(),
-                            });
-                        }
+                    levelBatch.set(newLevelRef, { ...levelData, createdAt: serverTimestamp() });
+                    
+                    if (oldLevelId) {
+                        oldLevelIdToNewLevelIdMap.set(oldLevelId, newLevelRef.id);
                     }
-                    await unitBatch.commit();
-                }
+                });
+                
+                await levelBatch.commit();
+                toast({ title: 'Import Step 2/3 Complete', description: `${originalLevels.length} levels imported.` });
+            }
 
-                toast({ title: 'Full Import Complete', description: `Levels and units for "${finalBuildingName}" have been imported.`});
+            // Batch import units
+            const originalUnits = importedUnits as any[] || [];
+            if (originalUnits.length > 0) {
+                 const unitBatch = writeBatch(firestore);
+                 
+                 originalUnits.forEach(unit => {
+                     const { id: oldUnitId, levelId: oldLevelId, ...unitData } = unit;
+                     const newLevelId = oldLevelIdToNewLevelIdMap.get(oldLevelId);
+
+                     if (newLevelId) {
+                         const newUnitRef = doc(collection(firestore, 'buildings', newBuildingId, 'units'));
+                         unitBatch.set(newUnitRef, {
+                             ...unitData,
+                             levelId: newLevelId,
+                             createdAt: serverTimestamp(),
+                         });
+                     }
+                 });
+
+                 await unitBatch.commit();
+                 toast({ title: 'Import Step 3/3 Complete', description: `${originalUnits.length} units imported successfully.` });
             }
 
         } catch (error: any) {
