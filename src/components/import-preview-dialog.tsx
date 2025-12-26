@@ -52,9 +52,7 @@ const JsonViewer = ({ data }: { data: any }) => {
 
 export function ImportPreviewDialog({ isOpen, onOpenChange, data, onConfirm }: ImportPreviewDialogProps) {
   
-  // For now, only handle JSON preview
   const isJson = data.format === 'json';
-  const buildingName = isJson ? data.data.name : 'N/A';
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
@@ -75,9 +73,8 @@ export function ImportPreviewDialog({ isOpen, onOpenChange, data, onConfirm }: I
 
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          {/* We will re-enable this once preview is confirmed working */}
-          <AlertDialogAction onClick={() => onConfirm(data)} disabled={true}>
-            Confirm Import (Disabled)
+          <AlertDialogAction onClick={() => onConfirm(data)}>
+            Confirm Import
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

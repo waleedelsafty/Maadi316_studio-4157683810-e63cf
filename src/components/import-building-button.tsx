@@ -18,7 +18,6 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
     const user = useUser();
     const [isImporting, setIsImporting] = useState(false);
     
-    // State for the new preview dialog
     const [previewData, setPreviewData] = useState<ImportData | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
@@ -33,14 +32,13 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
             reader.onload = (e) => handlePreview(e.target?.result as string, 'json');
             reader.readAsText(file);
         } else if (file.name.endsWith('.xlsx')) {
-             toast({ variant: 'destructive', title: 'Unsupported for now', description: 'Excel import is temporarily disabled for debugging.' });
+             toast({ variant: 'destructive', title: 'Unsupported for now', description: 'Excel import is temporarily disabled.' });
              setIsImporting(false);
         } else {
             toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please select a .json file.' });
             setIsImporting(false);
         }
 
-        // Reset file input
         if(fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -53,7 +51,6 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 setPreviewData({ format: 'json', data });
                 setIsPreviewOpen(true);
             }
-            // XLSX logic will be re-added here later
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Parse Failed', description: `Could not read the JSON file. Error: ${error.message}` });
         } finally {
@@ -69,21 +66,21 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
 
         setIsImporting(true);
         try {
-            let buildingData: Partial<Omit<Building, 'id' | 'ownerId' | 'createdAt'>>;
+            let importedData: Partial<Building>;
             
-            // For now, we only handle JSON
             if (data.format === 'json') {
+                 // Explicitly ignore id, ownerId, createdAt, levels, and units from the imported file
                  const { id, ownerId, createdAt, floors, units, levels, ...buildingCore } = data.data;
-                 buildingData = buildingCore;
+                 importedData = buildingCore;
             } else {
                 throw new Error("Excel format not supported yet in confirmation step.");
             }
 
-            if (!buildingData.name) {
+            if (!importedData || !importedData.name) {
                 throw new Error("Could not find building name in the imported file.");
             }
             
-            let finalBuildingName = buildingData.name;
+            let finalBuildingName = importedData.name;
             const existingNames = new Set((existingBuildings || []).map(b => b.name));
             if (existingNames.has(finalBuildingName)) {
                 const date = new Date().toISOString().split('T')[0];
@@ -92,18 +89,17 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
 
             const newBuildingDocData = {
                 name: finalBuildingName,
-                address: buildingData.address || 'N/A',
-                hasBasement: buildingData.hasBasement || false,
-                basementCount: buildingData.basementCount || 0,
-                hasMezzanine: buildingData.hasMezzanine || false,
-                mezzanineCount: buildingData.mezzanineCount || 0,
-                hasPenthouse: buildingData.hasPenthouse || false,
-                hasRooftop: buildingData.hasRooftop || false,
+                address: importedData.address || 'N/A',
+                hasBasement: importedData.hasBasement || false,
+                basementCount: importedData.basementCount || 0,
+                hasMezzanine: importedData.hasMezzanine || false,
+                mezzanineCount: importedData.mezzanineCount || 0,
+                hasPenthouse: importedData.hasPenthouse || false,
+                hasRooftop: importedData.hasRooftop || false,
                 ownerId: user.uid,
                 createdAt: serverTimestamp(),
             };
 
-            // For now, we just create the shell as requested.
             await addDoc(collection(firestore, 'buildings'), newBuildingDocData);
 
             toast({ title: 'Import Successful', description: `Building "${finalBuildingName}" shell has been created.` });
@@ -126,7 +122,7 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 ref={fileInputRef}
                 className="hidden"
                 onChange={handleFileSelect}
-                accept=".json,.xlsx"
+                accept=".json"
             />
             <Button onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
                  <Upload className="mr-2 h-4 w-4" />
