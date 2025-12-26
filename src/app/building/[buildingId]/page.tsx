@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
@@ -24,6 +24,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -252,11 +254,16 @@ export default function BuildingPage() {
         if (!isOpen) setEditingLevel(null);
     }
 
-    const handleExportData = () => {
+    const checkDataForExport = () => {
         if (!building || !levels || !units) {
             toast({ variant: 'destructive', title: 'Could not export', description: 'Data is not fully loaded yet.' });
-            return;
+            return false;
         }
+        return true;
+    }
+
+    const handleExportExcel = () => {
+        if (!checkDataForExport() || !building || !levels || !units) return;
 
         // 1. Prepare data for sheets
         const buildingInfoData = [
@@ -299,8 +306,25 @@ export default function BuildingPage() {
         const fileName = `${building.name.replace(/\s+/g, '_')}_Export.xlsx`;
         XLSX.writeFile(wb, fileName);
 
-        toast({ title: 'Export Complete', description: `Building data has been saved to ${fileName}.` });
+        toast({ title: 'Export Complete', description: `Building data saved to ${fileName}.` });
     };
+    
+    const handleExportJson = () => {
+        if (!checkDataForExport() || !building || !levels || !units) return;
+
+        const exportData = {
+            ...building,
+            levels: sortedLevels,
+            units: units,
+        };
+
+        const jsonString = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const fileName = `${building.name.replace(/\s+/g, '_')}_Export.json`;
+        saveAs(blob, fileName);
+
+        toast({ title: 'Export Complete', description: `Building data saved to ${fileName}.` });
+    }
 
     if (building && user && building.ownerId !== user.uid) {
         return (
@@ -330,9 +354,19 @@ export default function BuildingPage() {
                             <CardDescription>View and manage the general details and structure of your building.</CardDescription>
                         </div>
                         <div className="flex gap-2">
-                             <Button variant="outline" size="sm" onClick={handleExportData} disabled={!building || !levels || !units}>
-                                <Download className="mr-2 h-4 w-4" /> Export to Excel
-                            </Button>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" disabled={!building || !levels || !units}>
+                                        <Download className="mr-2 h-4 w-4" />
+                                        Export Data
+                                        <ChevronDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={handleExportExcel}>Export as Excel (.xlsx)</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={handleExportJson}>Export as JSON (.json)</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                             <Button variant="outline" size="sm" onClick={() => setIsBuildingSheetOpen(true)}>
                                 <Edit className="mr-2 h-4 w-4" /> Edit Building
                             </Button>
@@ -467,5 +501,3 @@ export default function BuildingPage() {
         </main>
     );
 }
-
-    
