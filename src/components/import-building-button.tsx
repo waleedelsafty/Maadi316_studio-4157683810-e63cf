@@ -58,23 +58,28 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 const { levels, units, ...restOfBuilding } = data;
                 buildingData = restOfBuilding;
                 levelsData = levels || [];
-                unitsData = (units || []).map((u: any) => ({ ...u, originalLevelName: levels.find((l: any) => l.id === u.levelId)?.name }));
+                // Find original level name for units from the imported levels array
+                unitsData = (units || []).map((u: any) => {
+                    const level = (levelsData as (Level & { id: string})[]).find((l: any) => l.id === u.levelId);
+                    return { ...u, originalLevelName: level?.name };
+                });
             } else { // xlsx
                 const workbook = XLSX.read(fileContent as ArrayBuffer, { type: 'buffer' });
                 
                 // Parse Building Info
                 const buildingSheet = workbook.Sheets['Building Info'];
+                if (!buildingSheet) throw new Error("Missing 'Building Info' worksheet in the Excel file.");
                 const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet, { header: ['Key', 'Value'] });
                 buildingData = buildingInfoJson.reduce((obj: any, item) => {
                     if (item.Key === 'Building Name') obj.name = item.Value;
                     if (item.Key === 'Address') obj.address = item.Value;
                     if (item.Key === 'Has Basement') {
-                        obj.hasBasement = item.Value.startsWith('Yes');
-                        if (obj.hasBasement) obj.basementCount = parseInt(item.Value.match(/\((\d+)/)?.[1] || 1, 10);
+                        obj.hasBasement = String(item.Value).startsWith('Yes');
+                        if (obj.hasBasement) obj.basementCount = parseInt(String(item.Value).match(/\((\d+)/)?.[1] || 1, 10);
                     }
                     if (item.Key === 'Has Mezzanine') {
-                        obj.hasMezzanine = item.Value.startsWith('Yes');
-                         if (obj.hasMezzanine) obj.mezzanineCount = parseInt(item.Value.match(/\((\d+)/)?.[1] || 1, 10);
+                        obj.hasMezzanine = String(item.Value).startsWith('Yes');
+                         if (obj.hasMezzanine) obj.mezzanineCount = parseInt(String(item.Value).match(/\((\d+)/)?.[1] || 1, 10);
                     }
                     if (item.Key === 'Has Penthouse') obj.hasPenthouse = item.Value === 'Yes';
                     if (item.Key === 'Has Rooftop') obj.hasRooftop = item.Value === 'Yes';
@@ -83,7 +88,7 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
 
                 // Parse Levels
                 const levelsSheet = workbook.Sheets['Levels'];
-                const rawLevels: any[] = XLSX.utils.sheet_to_json(levelsSheet);
+                const rawLevels: any[] = levelsSheet ? XLSX.utils.sheet_to_json(levelsSheet) : [];
                 levelsData = rawLevels.map(l => ({
                     name: l['Level Name'],
                     type: l['Type'],
@@ -92,7 +97,7 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 
                 // Parse Units
                 const unitsSheet = workbook.Sheets['Units'];
-                const rawUnits: any[] = XLSX.utils.sheet_to_json(unitsSheet);
+                const rawUnits: any[] = unitsSheet ? XLSX.utils.sheet_to_json(unitsSheet) : [];
                 unitsData = rawUnits.map(u => ({
                     unitNumber: u['Unit #'],
                     originalLevelName: u['Level'],
@@ -103,11 +108,14 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 }));
             }
             
+            if (!buildingData || !buildingData.name) {
+                throw new Error("Could not find building name in the imported file.");
+            }
+            
             // --- Data processing and Firestore writing ---
-
             // Handle name conflicts
             let finalBuildingName = buildingData.name;
-            const existingNames = new Set(existingBuildings.map(b => b.name));
+            const existingNames = new Set((existingBuildings || []).map(b => b.name));
             if (existingNames.has(finalBuildingName)) {
                 const date = new Date().toISOString().split('T')[0];
                 finalBuildingName = `${finalBuildingName}_#2_${date}`;
