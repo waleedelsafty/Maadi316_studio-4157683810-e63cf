@@ -23,7 +23,7 @@ import { LevelFormSheet } from '@/components/level-form-sheet';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -258,15 +258,48 @@ export default function BuildingPage() {
             return;
         }
 
-        const exportData = {
-            building: { ...building },
-            levels: [...levels],
-            units: [...units],
-        };
+        // 1. Prepare data for sheets
+        const buildingInfoData = [
+            { Key: 'Building Name', Value: building.name },
+            { Key: 'Address', Value: building.address },
+            { Key: 'Has Basement', Value: building.hasBasement ? `Yes (${building.basementCount || 1} level/s)`: 'No' },
+            { Key: 'Has Mezzanine', Value: building.hasMezzanine ? `Yes (${building.mezzanineCount || 1} level/s)`: 'No' },
+            { Key: 'Has Penthouse', Value: building.hasPenthouse ? 'Yes' : 'No' },
+            { Key: 'Has Rooftop', Value: building.hasRooftop ? 'Yes' : 'No' },
+        ];
 
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8' });
-        saveAs(blob, `${building.name.replace(/\s+/g, '_')}_export.json`);
-        toast({ title: 'Export Complete', description: 'Building data has been saved to a JSON file.' });
+        const levelsData = sortedLevels.map(level => ({
+            'Level Name': level.name,
+            'Type': level.type,
+            'Floor Number': level.type === 'Typical Floor' ? level.floorNumber : 'N/A',
+        }));
+
+        const levelsMap = new Map(levels.map(l => [l.id, l.name]));
+        const unitsData = units.map(unit => ({
+            'Unit #': unit.unitNumber,
+            'Level': levelsMap.get(unit.levelId) || 'Unknown',
+            'Type': unit.type,
+            'Size (sqm)': unit.sqm,
+            'Owner': unit.ownerName,
+            'Quarterly Maintenance': unit.quarterlyMaintenanceFees,
+        }));
+        
+        // 2. Create worksheets
+        const wb = XLSX.utils.book_new();
+        const wsBuilding = XLSX.utils.json_to_sheet(buildingInfoData);
+        const wsLevels = XLSX.utils.json_to_sheet(levelsData);
+        const wsUnits = XLSX.utils.json_to_sheet(unitsData);
+
+        // 3. Append worksheets to workbook
+        XLSX.utils.book_append_sheet(wb, wsBuilding, "Building Info");
+        XLSX.utils.book_append_sheet(wb, wsLevels, "Levels");
+        XLSX.utils.book_append_sheet(wb, wsUnits, "Units");
+
+        // 4. Write workbook and trigger download
+        const fileName = `${building.name.replace(/\s+/g, '_')}_Export.xlsx`;
+        XLSX.writeFile(wb, fileName);
+
+        toast({ title: 'Export Complete', description: `Building data has been saved to ${fileName}.` });
     };
 
     if (building && user && building.ownerId !== user.uid) {
@@ -298,7 +331,7 @@ export default function BuildingPage() {
                         </div>
                         <div className="flex gap-2">
                              <Button variant="outline" size="sm" onClick={handleExportData} disabled={!building || !levels || !units}>
-                                <Download className="mr-2 h-4 w-4" /> Export Data
+                                <Download className="mr-2 h-4 w-4" /> Export to Excel
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => setIsBuildingSheetOpen(true)}>
                                 <Edit className="mr-2 h-4 w-4" /> Edit Building
@@ -434,7 +467,5 @@ export default function BuildingPage() {
         </main>
     );
 }
-
-    
 
     
