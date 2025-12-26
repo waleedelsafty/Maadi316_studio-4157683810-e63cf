@@ -7,6 +7,8 @@ import {
   collection,
   query,
   where,
+  doc,
+  updateDoc,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
@@ -16,9 +18,44 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CheckIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImportBuildingButton } from '@/components/import-building-button';
+import { Edit, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+
+
+function SoftDeleteDialog({ onConfirm, buildingName }: { onConfirm: () => void, buildingName: string }) {
+    const [inputValue, setInputValue] = useState("");
+    const isMatch = inputValue === "delete";
+
+    return (
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will move the building "{buildingName}" to the recycle bin. It will not be visible in the main app but can be restored later.
+                    <br/><br/>
+                    To confirm, please type **delete** in the box below.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Input 
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder='delete'
+            />
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onConfirm} disabled={!isMatch}>
+                    Delete Building
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    );
+}
 
 function BuildingRow({ building }: { building: Building }) {
     const firestore = useFirestore();
+    const { toast } = useToast();
     const buildingName = (building as any)?.Building_name || (building as any)?.name;
 
 
@@ -40,6 +77,16 @@ function BuildingRow({ building }: { building: Building }) {
         return { hasGround, hasPenthouse, hasRooftop, typicalFloorCount };
 
     }, [levels]);
+
+    const handleSoftDelete = async () => {
+        if (!firestore || !building.id) return;
+        const buildingRef = doc(firestore, 'buildings', building.id);
+        await updateDoc(buildingRef, { isDeleted: true });
+        toast({
+            title: "Building Deleted",
+            description: `"${buildingName}" has been moved to the recycle bin.`
+        });
+    };
 
     if (error) {
         return (
@@ -64,7 +111,7 @@ function BuildingRow({ building }: { building: Building }) {
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
-                <TableCell className="text-right"><Skeleton className="h-9 w-16 ml-auto" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-9 w-24 ml-auto" /></TableCell>
             </TableRow>
         )
     }
@@ -92,9 +139,23 @@ function BuildingRow({ building }: { building: Building }) {
                 {levelInfo.hasRooftop && <CheckIcon className="mx-auto" />}
             </TableCell>
             <TableCell className="text-right">
-                <Button size="sm" asChild>
-                    <Link href={`/building/${building.id}`}>Open</Link>
-                </Button>
+                <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/building/${building.id}`}>
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Edit Building</span>
+                        </Link>
+                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Delete Building</span>
+                            </Button>
+                        </AlertDialogTrigger>
+                        <SoftDeleteDialog onConfirm={handleSoftDelete} buildingName={buildingName} />
+                    </AlertDialog>
+                </div>
             </TableCell>
         </TableRow>
     );

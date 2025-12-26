@@ -8,7 +8,7 @@ export default function SettingsLayout({
 }) {
   
   return (
-    <main className="w-full max-w-4xl mx-auto">
+    <main className="w-full">
       {children}
     </main>
   );
