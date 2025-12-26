@@ -69,15 +69,25 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
             let importedData: Partial<Building>;
             
             if (data.format === 'json') {
+                 // The actual building data is nested inside the 'data' property of the ImportData object.
+                 const buildingFileData = data.data;
+
+                 if (!buildingFileData) {
+                     throw new Error("Imported file appears to be empty or corrupted.");
+                 }
+                 
                  // Explicitly ignore id, ownerId, createdAt, levels, and units from the imported file
-                 const { id, ownerId, createdAt, floors, units, levels, ...buildingCore } = data.data;
+                 const { id, ownerId, createdAt, floors, units, levels, ...buildingCore } = buildingFileData;
                  importedData = buildingCore;
             } else {
                 throw new Error("Excel format not supported yet in confirmation step.");
             }
 
-            if (!importedData || !importedData.name) {
-                throw new Error("Could not find building name in the imported file.");
+            if (!importedData) {
+                throw new Error("Failed to extract building data from the file.");
+            }
+            if (!importedData.name) {
+                throw new Error("Could not find a 'name' field in the imported building data.");
             }
             
             let finalBuildingName = importedData.name;
