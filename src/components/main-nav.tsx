@@ -23,6 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
 import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard, Trash2, Palette } from 'lucide-react';
 import { Separator } from './ui/separator';
+import { ThemeToggle } from './theme-toggle';
 
 export function MainNav({ children }: { children: React.ReactNode }) {
   const user = useUser();
@@ -166,11 +167,14 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex items-center gap-2 border-b p-2 h-14">
-            <SidebarTrigger />
-            <h2 className="text-lg font-semibold">
-                {getPageTitle()}
-            </h2>
+        <header className="flex items-center justify-between gap-2 border-b p-2 h-14">
+            <div className="flex items-center gap-2">
+                <SidebarTrigger />
+                <h2 className="text-lg font-semibold">
+                    {getPageTitle()}
+                </h2>
+            </div>
+            <ThemeToggle />
         </header>
         <div className="p-4 sm:p-6">
             {children}

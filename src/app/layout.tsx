@@ -7,6 +7,7 @@ import { AppProvider } from "@/components/app-provider";
 import { FirebaseClientProvider, initializeFirebase } from "@/firebase";
 import { MainNav } from "@/components/main-nav";
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 const firebaseApp = initializeFirebase();
@@ -19,12 +20,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <AppProvider>
-          <FirebaseClientProvider firebaseApp={firebaseApp}>
-            <MainNav>{children}</MainNav>
-            <Toaster />
-          </FirebaseClientProvider>
-        </AppProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AppProvider>
+            <FirebaseClientProvider firebaseApp={firebaseApp}>
+              <MainNav>{children}</MainNav>
+              <Toaster />
+            </FirebaseClientProvider>
+          </AppProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
