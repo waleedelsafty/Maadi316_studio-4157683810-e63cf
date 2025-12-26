@@ -72,11 +72,16 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
 
                     data = {
                         ...buildingData,
-                        levels: excelLevels.map((l: any) => ({
-                            name: l['Level Name'],
-                            type: l['Type'],
-                            floorNumber: l['Floor Number'] === 'N/A' ? undefined : l['Floor Number']
-                        })),
+                        levels: excelLevels.map((l: any) => {
+                            const level: Partial<Level> = {
+                                name: l['Level Name'],
+                                type: l['Type'],
+                            };
+                            if (l['Type'] === 'Typical Floor' && l['Floor Number'] !== 'N/A' && !isNaN(Number(l['Floor Number']))) {
+                                level.floorNumber = Number(l['Floor Number']);
+                            }
+                            return level;
+                        }),
                         units: excelUnits.map((u: any) => ({
                              unitNumber: u['Unit #'],
                              levelName: u['Level'], // We'll map this to levelId later
