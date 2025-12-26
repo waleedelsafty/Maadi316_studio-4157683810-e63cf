@@ -17,6 +17,7 @@ import { ArrowLeft, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LevelFormSheet } from '@/components/level-form-sheet';
+import { UnitFormSheet } from '@/components/unit-form-sheet';
 
 const unitTypes: Unit['type'][] = ['Office', 'Commercial', 'Flat Apartment', 'Duplex Apartment', 'Storage'];
 
@@ -33,6 +34,7 @@ export default function LevelPage() {
     const [unitMaintenance, setUnitMaintenance] = useState<number | ''>('');
     const [unitOwnerName, setUnitOwnerName] = useState('');
     const [unitType, setUnitType] = useState<Unit['type'] | ''>('');
+    const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
     // State for level editing
     const [isLevelSheetOpen, setIsLevelSheetOpen] = useState(false);
@@ -96,6 +98,16 @@ export default function LevelPage() {
                 errorEmitter.emit('permission-error', new FirestorePermissionError({ path: unitRef.path, operation: 'delete' }));
             });
     };
+    
+    const handleEditUnit = (unit: Unit) => {
+        setEditingUnit(unit);
+    }
+    
+    const handleUnitSheetOpenChange = (isOpen: boolean) => {
+        if (!isOpen) {
+            setEditingUnit(null);
+        }
+    }
 
     return (
         <main className="w-full max-w-5xl space-y-8">
@@ -176,7 +188,7 @@ export default function LevelPage() {
                                                 <TableCell>{unit.quarterlyMaintenanceFees}</TableCell>
                                                 <TableCell className="text-right">
                                                      <div className="flex gap-2 justify-end">
-                                                        <Button variant="outline" size="sm" disabled>Edit</Button>
+                                                        <Button variant="outline" size="sm" onClick={() => handleEditUnit(unit)}>Edit</Button>
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild><Button variant="destructive" size="sm">Delete</Button></AlertDialogTrigger>
                                                             <AlertDialogContent>
@@ -215,6 +227,15 @@ export default function LevelPage() {
                     isOpen={isLevelSheetOpen} 
                     onOpenChange={setIsLevelSheetOpen} 
                     existingLevels={allLevels || []} 
+                />
+            )}
+            
+            {editingUnit && (
+                <UnitFormSheet
+                    unit={editingUnit}
+                    buildingId={buildingId}
+                    isOpen={!!editingUnit}
+                    onOpenChange={handleUnitSheetOpenChange}
                 />
             )}
         </main>
