@@ -144,18 +144,6 @@ export function MainNav({ children }: { children: React.ReactNode }) {
              <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
-                  isActive={pathname.startsWith('/settings/css-overrides')}
-                  tooltip="CSS Overrides"
-                >
-                    <Link href="/settings/css-overrides">
-                        <Code />
-                        <span>CSS Overrides</span>
-                    </Link>
-                </SidebarMenuButton>
-             </SidebarMenuItem>
-             <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild
                   isActive={pathname.startsWith('/settings/general')}
                   tooltip="Settings"
                 >
@@ -180,7 +168,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex items-center justify-between gap-2 border-b p-2 h-14">
+        <header className="flex items-center justify-between gap-2 border-b p-4 h-14">
             <div className="flex items-center gap-2">
                 <SidebarTrigger />
                 <h2 className="text-lg font-semibold">
@@ -189,7 +177,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
             </div>
             <ThemeToggle />
         </header>
-        <div className="p-2 sm:p-4">
+        <div className="p-4 sm:p-6">
             {children}
         </div>
         </SidebarInset>

@@ -3,7 +3,6 @@
 
 import { Inter } from "next/font/google";
 import "./globals.css";
-import "./custom-overrides.css"; // Import custom overrides
 import { AppProvider } from "@/components/app-provider";
 import { FirebaseClientProvider, initializeFirebase } from "@/firebase";
 import { MainNav } from "@/components/main-nav";
