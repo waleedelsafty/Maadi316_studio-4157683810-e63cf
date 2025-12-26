@@ -318,7 +318,7 @@ export default function BuildingPage() {
     }
 
     const handleExportExcel = () => {
-        if (!checkDataForExport() || !building || !levels || !units) return;
+        if (!checkDataForExport() || !building || !levels || !units || !building.Building_name) return;
 
         // 1. Prepare data for sheets
         const buildingInfoData = [
@@ -365,7 +365,7 @@ export default function BuildingPage() {
     };
     
     const handleExportJson = () => {
-        if (!checkDataForExport() || !building || !levels || !units) return;
+        if (!checkDataForExport() || !building || !levels || !units || !building.Building_name) return;
 
         const exportData = {
             ...building,
