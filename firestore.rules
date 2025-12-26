@@ -20,8 +20,8 @@ service cloud.firestore {
     }
 
     // Buildings can be created by any authenticated user.
+    // List operations are allowed ONLY if the query is filtered by ownerId.
     // Owners can read, update, and delete their own building documents.
-    // List operations are allowed if the query is filtered by ownerId.
     match /buildings/{buildingId} {
       allow list: if request.auth != null && request.query.where.ownerId == request.auth.uid;
       allow read, update, delete: if isOwner(resource.data.ownerId);
