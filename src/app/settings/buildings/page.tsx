@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CheckIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ImportBuildingButton } from '@/components/import-building-button';
 
 function BuildingRow({ building }: { building: Building }) {
     const firestore = useFirestore();
@@ -132,10 +133,33 @@ export default function BuildingsSettingsPage() {
           <h2 className="text-2xl font-bold">Your Buildings</h2>
           <p className="text-muted-foreground">Manage your building portfolio.</p>
         </div>
-        <Button onClick={handleOpenSheet}>Add Building</Button>
+        <div className="flex gap-2">
+            <ImportBuildingButton existingBuildings={buildings || []} />
+            <Button onClick={handleOpenSheet}>Add Building</Button>
+        </div>
       </div>
       
       <div className="border rounded-lg">
+        {buildings === null && (
+             <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Address</TableHead>
+                        <TableHead className="text-center">Basement</TableHead>
+                        <TableHead className="text-center">Mezzanine</TableHead>
+                        <TableHead className="text-center">Ground</TableHead>
+                        <TableHead className="text-center">Typical Floors</TableHead>
+                        <TableHead className="text-center">Penthouse</TableHead>
+                        <TableHead className="text-center">Rooftop</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {[...Array(3)].map((_, i) => <BuildingRow key={i} building={{} as Building} />)}
+                </TableBody>
+             </Table>
+        )}
         {buildings && buildings.length > 0 ? (
           <Table>
             <TableHeader>
@@ -157,17 +181,17 @@ export default function BuildingsSettingsPage() {
                 ))}
             </TableBody>
           </Table>
-        ) : (
+        ) : buildings && buildings.length === 0 ? (
           <div className="text-center py-12 px-4">
             <p className="text-muted-foreground">
-              You haven't added any buildings yet. Click "Add Building" to start.
+              You haven't added any buildings yet. Click "Add Building" or "Import Building" to start.
             </p>
           </div>
-        )}
+        ) : null}
       </div>
 
       <BuildingFormSheet
-          building={null} // Always for adding new building now
+          building={null}
           isOpen={isSheetOpen}
           onOpenChange={handleSheetOpenChange}
       />
