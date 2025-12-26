@@ -14,6 +14,14 @@ This is a Next.js application built with Firebase Studio for managing building i
 
 ## Version History
 
+### v0.1.6
+- **Data Export**: Added functionality to export all building data (details, levels, units) to either JSON or multi-sheet Excel formats via a dropdown menu on the building detail page.
+- **Homepage Dashboard Redesign**: The homepage now acts as a true dashboard, displaying a list of building summary cards instead of a simple dropdown, providing an at-a-glance portfolio view.
+- **Enhanced Dashboard Visuals**: Added a summary card showing total building count and a bar chart visualizing the number of units per building.
+- **Improved Navigation**: Revamped the main sidebar navigation to have distinct "Dashboard", "My Buildings", and "Settings" sections for better organization.
+- **Advanced Table Sorting**: The building levels list now features interactive, sortable column headers for name, type, and unit count.
+- **UI & UX Polish**: Compacted the layout on the building detail page to reduce whitespace and implemented validation to prevent disabling a building structure type (e.g., "Has Penthouse") if a level of that type already exists.
+
 ### v0.1.5
 - **Unit Management**: Added the ability to create, view, and delete individual units (e.g., offices, apartments) within each building level.
 - **Dedicated Level Page**: Refactored the UI to give each building level its own dedicated page, which now serves as the central place to manage that level's details and its associated units.
