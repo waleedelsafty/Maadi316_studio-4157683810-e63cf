@@ -51,28 +51,17 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
             if (!firestore || !user) throw new Error("Authentication error.");
 
             let buildingData: ImportedBuilding;
-            let levelsData: ImportedLevel[];
-            let unitsData: ImportedUnit[];
-
+            
             if (format === 'json') {
                 const data = JSON.parse(fileContent as string);
                 
-                // Correctly separate building properties from levels and units
+                // Separate building properties from levels and units
                 const { levels, units, id, ownerId, createdAt, ...restOfBuilding } = data;
-                
                 buildingData = restOfBuilding;
-                levelsData = levels || [];
-                // Map units to their original level name for later linking
-                unitsData = (units || []).map((unit: Unit) => {
-                    const level = (levelsData as (Level & { id: string})[]).find(l => l.id === unit.levelId);
-                    const { id: unitId, levelId, createdAt: unitCreatedAt, ...restOfUnit } = unit;
-                    return { ...restOfUnit, originalLevelName: level?.name };
-                });
 
             } else { // xlsx
                 const workbook = XLSX.read(fileContent as ArrayBuffer, { type: 'buffer' });
                 
-                // Parse Building Info
                 const buildingSheet = workbook.Sheets['Building Info'];
                 if (!buildingSheet) throw new Error("Missing 'Building Info' worksheet in the Excel file.");
                 const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet);
@@ -86,34 +75,12 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                     name: infoMap['Building Name'],
                     address: infoMap['Address'],
                     hasBasement: String(infoMap['Has Basement']).startsWith('Yes'),
-                    basementCount: String(infoMap['Has Basement']).startsWith('Yes') ? parseInt(String(infoMap['Has Basement']).match(/\((\d+)/)?.[1] || '1', 10) : undefined,
+                    basementCount: String(infoMap['Has Basement']).startsWith('Yes') ? parseInt(String(infoMap['Has Basement']).match(/\((\d+)/)?.[1] || '1', 10) : 0,
                     hasMezzanine: String(infoMap['Has Mezzanine']).startsWith('Yes'),
-                    mezzanineCount: String(infoMap['Has Mezzanine']).startsWith('Yes') ? parseInt(String(infoMap['Has Mezzanine']).match(/\((\d+)/)?.[1] || '1', 10) : undefined,
+                    mezzanineCount: String(infoMap['Has Mezzanine']).startsWith('Yes') ? parseInt(String(infoMap['Has Mezzanine']).match(/\((\d+)/)?.[1] || '1', 10) : 0,
                     hasPenthouse: infoMap['Has Penthouse'] === 'Yes',
                     hasRooftop: infoMap['Has Rooftop'] === 'Yes',
                 };
-
-
-                // Parse Levels
-                const levelsSheet = workbook.Sheets['Levels'];
-                const rawLevels: any[] = levelsSheet ? XLSX.utils.sheet_to_json(levelsSheet) : [];
-                levelsData = rawLevels.map(l => ({
-                    name: l['Level Name'],
-                    type: l['Type'],
-                    floorNumber: l['Floor Number'] === 'N/A' ? undefined : l['Floor Number']
-                }));
-                
-                // Parse Units
-                const unitsSheet = workbook.Sheets['Units'];
-                const rawUnits: any[] = unitsSheet ? XLSX.utils.sheet_to_json(unitsSheet) : [];
-                unitsData = rawUnits.map(u => ({
-                    unitNumber: u['Unit #'],
-                    originalLevelName: u['Level'],
-                    type: u['Type'],
-                    sqm: u['Size (sqm)'],
-                    ownerName: u['Owner'],
-                    quarterlyMaintenanceFees: u['Quarterly Maintenance'],
-                }));
             }
             
             if (!buildingData || !buildingData.name) {
@@ -136,31 +103,9 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 createdAt: serverTimestamp(),
             };
 
-            const buildingRef = await addDoc(collection(firestore, 'buildings'), newBuildingDoc);
+            await addDoc(collection(firestore, 'buildings'), newBuildingDoc);
 
-            const batch = writeBatch(firestore);
-            
-            // Add Levels and map old names to new IDs
-            const levelNameMap = new Map<string, string>();
-            for (const level of levelsData) {
-                const levelRef = doc(collection(firestore, 'buildings', buildingRef.id, 'levels'));
-                batch.set(levelRef, { ...level, createdAt: serverTimestamp() });
-                levelNameMap.set(level.name, levelRef.id);
-            }
-            
-            // Add Units, using the name map to set the correct new levelId
-            for (const unit of unitsData) {
-                const levelId = levelNameMap.get(unit.originalLevelName || '');
-                if (levelId) {
-                    const unitRef = doc(collection(firestore, 'buildings', buildingRef.id, 'units'));
-                    const { originalLevelName, ...restOfUnit } = unit;
-                    batch.set(unitRef, { ...restOfUnit, levelId, createdAt: serverTimestamp() });
-                }
-            }
-
-            await batch.commit();
-
-            toast({ title: 'Import Successful', description: `Building "${finalBuildingName}" has been created.` });
+            toast({ title: 'Import Successful', description: `Building "${finalBuildingName}" shell has been created.` });
 
         } catch (error: any) {
             console.error("Import failed:", error);
@@ -187,5 +132,3 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
         </>
     );
 }
-
-    
