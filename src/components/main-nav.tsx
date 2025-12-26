@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
-import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard, Trash2 } from 'lucide-react';
+import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard, Trash2, Palette } from 'lucide-react';
 import { Separator } from './ui/separator';
 
 export function MainNav({ children }: { children: React.ReactNode }) {
@@ -64,6 +64,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
     if (pathname === '/settings/general') return 'General Settings';
     if (pathname === '/settings/buildings') return 'My Buildings';
     if (pathname === '/settings/recycle-bin') return 'Recycle Bin';
+    if (pathname === '/settings/theme') return 'Theme Editor';
     return 'Dashboard';
   }
 
@@ -126,10 +127,22 @@ export function MainNav({ children }: { children: React.ReactNode }) {
                     </Link>
                 </SidebarMenuButton>
              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={pathname.startsWith('/settings/theme')}
+                  tooltip="Theme"
+                >
+                    <Link href="/settings/theme">
+                        <Palette />
+                        <span>Theme</span>
+                    </Link>
+                </SidebarMenuButton>
+             </SidebarMenuItem>
              <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
-                  isActive={pathname === '/settings/general'}
+                  isActive={pathname.startsWith('/settings/general')}
                   tooltip="Settings"
                 >
                     <Link href="/settings/general">
