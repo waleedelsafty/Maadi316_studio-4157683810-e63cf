@@ -200,10 +200,12 @@ export default function BuildingPage() {
         if (!levels) return [];
         return [...levels].sort((a, b) => {
             const dir = sortDirection === 'asc' ? 1 : -1;
+            const aName = a.name || '';
+            const bName = b.name || '';
 
             switch (sortKey) {
                 case 'name':
-                    return a.name.localeCompare(b.name) * dir;
+                    return aName.localeCompare(bName) * dir;
                 case 'units':
                     const aUnits = unitCountsByLevel.get(a.id) || 0;
                     const bUnits = unitCountsByLevel.get(b.id) || 0;
@@ -219,9 +221,9 @@ export default function BuildingPage() {
                         return ((a.floorNumber || 0) - (b.floorNumber || 0)) * dir;
                     }
                     if (a.type === 'Basement') {
-                        return a.name.localeCompare(b.name) * (dir * -1); // Higher basement numbers first
+                        return aName.localeCompare(bName) * (dir * -1); // Higher basement numbers first
                     }
-                    return a.name.localeCompare(b.name) * dir;
+                    return aName.localeCompare(bName) * dir;
             }
         });
     }, [levels, sortKey, sortDirection, unitCountsByLevel]);
@@ -654,7 +656,7 @@ export default function BuildingPage() {
             <BuildingFormSheet building={building} isOpen={isBuildingSheetOpen} onOpenChange={setIsBuildingSheetOpen} />
 
             {editingLevel && (
-                <LevelFormSheet level={editingLevel} buildingId={buildingId} isOpen={isLevelSheetOpen} onOpenChange={handleLevelSheetOpenChange} existingLevels={levels || []} />
+                <LevelFormSheet level={editingLevel} buildingId={buildingId} isOpen={isLevelSheetOpen} onOpen-change={handleLevelSheetOpenChange} existingLevels={levels || []} />
             )}
 
             <AlertDialog open={!!validationError} onOpenChange={() => setValidationError(null)}>
@@ -671,5 +673,7 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    
 
     
