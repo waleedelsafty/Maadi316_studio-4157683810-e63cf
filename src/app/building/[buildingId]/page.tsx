@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown, Edit } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
@@ -23,6 +23,7 @@ import { LevelFormSheet } from '@/components/level-form-sheet';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { saveAs } from 'file-saver';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -113,6 +114,12 @@ export default function BuildingPage() {
     }, [firestore, buildingId]);
 
     const { data: levels } = useCollection(levelsQuery);
+
+    const unitsQuery = useMemo(() => {
+        if (!firestore || !buildingId) return null;
+        return query(collection(firestore, 'buildings', buildingId, 'units'));
+    }, [firestore, buildingId]);
+    const { data: units } = useCollection(unitsQuery);
 
     const availableLevelTypes = useMemo(() => {
         if (!levels || !building) return levelTypes;
@@ -245,6 +252,23 @@ export default function BuildingPage() {
         if (!isOpen) setEditingLevel(null);
     }
 
+    const handleExportData = () => {
+        if (!building || !levels || !units) {
+            toast({ variant: 'destructive', title: 'Could not export', description: 'Data is not fully loaded yet.' });
+            return;
+        }
+
+        const exportData = {
+            building: { ...building },
+            levels: [...levels],
+            units: [...units],
+        };
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8' });
+        saveAs(blob, `${building.name.replace(/\s+/g, '_')}_export.json`);
+        toast({ title: 'Export Complete', description: 'Building data has been saved to a JSON file.' });
+    };
+
     if (building && user && building.ownerId !== user.uid) {
         return (
             <div className="text-center">
@@ -272,9 +296,14 @@ export default function BuildingPage() {
                             <CardTitle>Building Information</CardTitle>
                             <CardDescription>View and manage the general details and structure of your building.</CardDescription>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => setIsBuildingSheetOpen(true)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Building
-                        </Button>
+                        <div className="flex gap-2">
+                             <Button variant="outline" size="sm" onClick={handleExportData} disabled={!building || !levels || !units}>
+                                <Download className="mr-2 h-4 w-4" /> Export Data
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => setIsBuildingSheetOpen(true)}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit Building
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -405,5 +434,7 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    
 
     
