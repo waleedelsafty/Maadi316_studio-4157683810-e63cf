@@ -58,17 +58,33 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                          else if (row.Key === 'Has Mezzanine') buildingData['hasMezzanine'] = row.Value?.startsWith('Yes');
                          else if (row.Key === 'Has Penthouse') buildingData['hasPenthouse'] = row.Value === 'Yes';
                          else if (row.Key === 'Has Rooftop') buildingData['hasRooftop'] = row.Value === 'Yes';
-                         else if (row.Value?.toString().includes('level/s')) {
+                         
+                         if (row.Value?.toString().includes('level/s')) {
                             const count = parseInt(row.Value.toString().match(/\((\d+)/)?.[1] || '1', 10);
                             if (row.Key === 'Has Basement') buildingData['basementCount'] = count;
                             if (row.Key === 'Has Mezzanine') buildingData['mezzanineCount'] = count;
                          }
                     });
 
+                    const excelLevels = levelsSheet ? XLSX.utils.sheet_to_json(levelsSheet) : [];
+                    const excelUnits = unitsSheet ? XLSX.utils.sheet_to_json(unitsSheet) : [];
+
+
                     data = {
                         ...buildingData,
-                        levels: levelsSheet ? XLSX.utils.sheet_to_json(levelsSheet) : [],
-                        units: unitsSheet ? XLSX.utils.sheet_to_json(unitsSheet) : []
+                        levels: excelLevels.map((l: any) => ({
+                            name: l['Level Name'],
+                            type: l['Type'],
+                            floorNumber: l['Floor Number'] === 'N/A' ? undefined : l['Floor Number']
+                        })),
+                        units: excelUnits.map((u: any) => ({
+                             unitNumber: u['Unit #'],
+                             levelName: u['Level'], // We'll map this to levelId later
+                             type: u['Type'],
+                             sqm: u['Size (sqm)'],
+                             ownerName: u['Owner'],
+                             quarterlyMaintenanceFees: u['Quarterly Maintenance'],
+                        }))
                     }
                     format = 'xlsx';
 
@@ -107,6 +123,7 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
         setIsImporting(true);
         try {
             const importedData = importSessionData.data;
+            const importFormat = importSessionData.format;
 
             if (!importedData) {
                 throw new Error("Imported file appears to be empty or corrupted.");
@@ -120,7 +137,7 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 throw new Error("Could not find 'Building_name' or 'name' in the imported file.");
             }
             
-            const existingNames = new Set((existingBuildings || []).map(b => b.Building_name || (b as any).name));
+            const existingNames = new Set((existingBuildings || []).map(b => (b as any).Building_name || (b as any).name));
             if (existingNames.has(finalBuildingName)) {
                 const date = new Date().toISOString().split('T')[0];
                 finalBuildingName = `${finalBuildingName} (Imported ${date})`;
@@ -139,7 +156,7 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
             toast({ title: 'Import Step 1/3 Complete', description: `Building "${finalBuildingName}" created.` });
 
             // Batch import levels
-            const oldLevelIdToNewLevelIdMap = new Map<string, string>();
+            const oldIdOrNameToNewIdMap = new Map<string, string>();
             const originalLevels = importedLevels as any[] || [];
 
             if (originalLevels.length > 0) {
@@ -152,7 +169,10 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                     levelBatch.set(newLevelRef, { ...levelData, createdAt: serverTimestamp() });
                     
                     if (oldLevelId) {
-                        oldLevelIdToNewLevelIdMap.set(oldLevelId, newLevelRef.id);
+                        oldIdOrNameToNewIdMap.set(oldLevelId, newLevelRef.id);
+                    }
+                    if (level.name) { // For Excel import mapping
+                        oldIdOrNameToNewIdMap.set(level.name, newLevelRef.id);
                     }
                 });
                 
@@ -166,8 +186,14 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                  const unitBatch = writeBatch(firestore);
                  
                  originalUnits.forEach(unit => {
-                     const { id: oldUnitId, levelId: oldLevelId, ...unitData } = unit;
-                     const newLevelId = oldLevelIdToNewLevelIdMap.get(oldLevelId);
+                     const { id: oldUnitId, levelId: oldLevelId, levelName, ...unitData } = unit; // levelName is for Excel
+                     
+                     let newLevelId: string | undefined;
+                     if (importFormat === 'json' && oldLevelId) {
+                         newLevelId = oldIdOrNameToNewIdMap.get(oldLevelId);
+                     } else if (importFormat === 'xlsx' && levelName) {
+                         newLevelId = oldIdOrNameToNewIdMap.get(levelName);
+                     }
 
                      if (newLevelId) {
                          const newUnitRef = doc(collection(firestore, 'buildings', newBuildingId, 'units'));
