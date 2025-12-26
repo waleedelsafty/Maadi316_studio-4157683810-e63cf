@@ -55,11 +55,22 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
 
             if (format === 'json') {
                 const data = JSON.parse(fileContent as string);
-                const { levels, units, ...restOfBuilding } = data;
-                buildingData = restOfBuilding;
-                levelsData = levels || [];
+                // Specifically extract building properties, ignoring old id, ownerId etc.
+                buildingData = {
+                    name: data.name,
+                    address: data.address,
+                    hasBasement: data.hasBasement,
+                    basementCount: data.basementCount,
+                    hasMezzanine: data.hasMezzanine,
+                    mezzanineCount: data.mezzanineCount,
+                    hasPenthouse: data.hasPenthouse,
+                    hasRooftop: data.hasRooftop,
+                    floors: data.floors,
+                    units: data.units,
+                };
+                levelsData = data.levels || [];
                 // Find original level name for units from the imported levels array
-                unitsData = (units || []).map((u: any) => {
+                unitsData = (data.units || []).map((u: any) => {
                     const level = (levelsData as (Level & { id: string})[]).find((l: any) => l.id === u.levelId);
                     return { ...u, originalLevelName: level?.name };
                 });
@@ -69,20 +80,21 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 // Parse Building Info
                 const buildingSheet = workbook.Sheets['Building Info'];
                 if (!buildingSheet) throw new Error("Missing 'Building Info' worksheet in the Excel file.");
-                const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet, { header: ['Key', 'Value'] });
+                const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet);
+
                 buildingData = buildingInfoJson.reduce((obj: any, item) => {
-                    if (item.Key === 'Building Name') obj.name = item.Value;
-                    if (item.Key === 'Address') obj.address = item.Value;
-                    if (item.Key === 'Has Basement') {
-                        obj.hasBasement = String(item.Value).startsWith('Yes');
-                        if (obj.hasBasement) obj.basementCount = parseInt(String(item.Value).match(/\((\d+)/)?.[1] || 1, 10);
+                    if (item['Key'] === 'Building Name') obj.name = item['Value'];
+                    if (item['Key'] === 'Address') obj.address = item['Value'];
+                    if (item['Key'] === 'Has Basement') {
+                        obj.hasBasement = String(item['Value']).startsWith('Yes');
+                        if (obj.hasBasement) obj.basementCount = parseInt(String(item['Value']).match(/\((\d+)/)?.[1] || 1, 10);
                     }
-                    if (item.Key === 'Has Mezzanine') {
-                        obj.hasMezzanine = String(item.Value).startsWith('Yes');
-                         if (obj.hasMezzanine) obj.mezzanineCount = parseInt(String(item.Value).match(/\((\d+)/)?.[1] || 1, 10);
+                    if (item['Key'] === 'Has Mezzanine') {
+                        obj.hasMezzanine = String(item['Value']).startsWith('Yes');
+                         if (obj.hasMezzanine) obj.mezzanineCount = parseInt(String(item['Value']).match(/\((\d+)/)?.[1] || 1, 10);
                     }
-                    if (item.Key === 'Has Penthouse') obj.hasPenthouse = item.Value === 'Yes';
-                    if (item.Key === 'Has Rooftop') obj.hasRooftop = item.Value === 'Yes';
+                    if (item['Key'] === 'Has Penthouse') obj.hasPenthouse = item['Value'] === 'Yes';
+                    if (item['Key'] === 'Has Rooftop') obj.hasRooftop = item['Value'] === 'Yes';
                     return obj;
                 }, {});
 
