@@ -176,7 +176,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
             </div>
             <ThemeToggle />
         </header>
-        <div className="p-4 sm:p-6">
+        <div className="p-2 sm:p-4">
             {children}
         </div>
         </SidebarInset>
