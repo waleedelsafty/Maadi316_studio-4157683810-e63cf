@@ -101,6 +101,7 @@ export default function BuildingPage() {
 
     // State for common UI
     const [isBuildingSheetOpen, setIsBuildingSheetOpen] = useState(false);
+    const [validationError, setValidationError] = useState<{ title: string, description: string} | null>(null);
     
     // Firestore Hooks
     const buildingRef = useMemo(() => {
@@ -189,13 +190,12 @@ export default function BuildingPage() {
 
         let updateData: { [key: string]: any } = { [field]: value };
 
-        if (field === 'hasBasement') {
-            if (value === false) updateData.basementCount = 0;
-            else if (!building?.basementCount) updateData.basementCount = 1;
+        // Auto-set counts when enabling a feature for the first time
+        if (field === 'hasBasement' && value === true && !building?.basementCount) {
+             updateData.basementCount = 1;
         }
-        if (field === 'hasMezzanine') {
-            if (value === false) updateData.mezzanineCount = 0;
-            else if (!building?.mezzanineCount) updateData.mezzanineCount = 1;
+        if (field === 'hasMezzanine' && value === true && !building?.mezzanineCount) {
+            updateData.mezzanineCount = 1;
         }
 
         try {
@@ -205,6 +205,34 @@ export default function BuildingPage() {
              errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: buildingRef.path, operation: 'update', requestResourceData: updateData,
             }));
+        }
+    };
+
+    const handleStructureChange = (field: 'hasBasement' | 'hasMezzanine' | 'hasPenthouse' | 'hasRooftop', checked: boolean) => {
+        // If user is enabling the feature, just update it.
+        if (checked) {
+            handleUpdateBuilding(field, true);
+            return;
+        }
+
+        // If user is disabling, check for existing levels of that type.
+        const levelTypeMap = {
+            hasBasement: 'Basement',
+            hasMezzanine: 'Mezzanine',
+            hasPenthouse: 'Penthouse',
+            hasRooftop: 'Rooftop',
+        };
+        const typeToCheck = levelTypeMap[field] as Level['type'];
+        const existingLevelsOfType = levels?.filter(level => level.type === typeToCheck) || [];
+
+        if (existingLevelsOfType.length > 0) {
+            setValidationError({
+                title: `Cannot Disable "${typeToCheck}"`,
+                description: `You must first delete all levels of type "${typeToCheck}" before you can disable this option.`,
+            });
+        } else {
+            // No conflict, proceed with update
+            handleUpdateBuilding(field, false);
         }
     };
     
@@ -392,7 +420,7 @@ export default function BuildingPage() {
                                                     <SelectContent>{[1, 2, 3].map(num => <SelectItem key={num} value={String(num)}>{num}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             )}
-                                            <Switch id="hasBasement" checked={building.hasBasement} onCheckedChange={(checked) => handleUpdateBuilding('hasBasement', checked)} />
+                                            <Switch id="hasBasement" checked={building.hasBasement} onCheckedChange={(checked) => handleStructureChange('hasBasement', checked)} />
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between border-b pb-2">
@@ -404,16 +432,16 @@ export default function BuildingPage() {
                                                     <SelectContent>{[1, 2, 3, 4].map(num => <SelectItem key={num} value={String(num)}>{num}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             )}
-                                            <Switch id="hasMezzanine" checked={building.hasMezzanine} onCheckedChange={(checked) => handleUpdateBuilding('hasMezzanine', checked)} />
+                                            <Switch id="hasMezzanine" checked={building.hasMezzanine} onCheckedChange={(checked) => handleStructureChange('hasMezzanine', checked)} />
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between border-b pb-2">
                                         <Label htmlFor="hasPenthouse" className="text-sm font-medium text-muted-foreground">Has Penthouse</Label>
-                                        <Switch id="hasPenthouse" checked={building.hasPenthouse} onCheckedChange={(checked) => handleUpdateBuilding('hasPenthouse', checked)} />
+                                        <Switch id="hasPenthouse" checked={building.hasPenthouse} onCheckedChange={(checked) => handleStructureChange('hasPenthouse', checked)} />
                                     </div>
                                     <div className="flex items-center justify-between border-b pb-2">
                                         <Label htmlFor="hasRooftop" className="text-sm font-medium text-muted-foreground">Has Usable Rooftop</Label>
-                                        <Switch id="hasRooftop" checked={building.hasRooftop} onCheckedChange={(checked) => handleUpdateBuilding('hasRooftop', checked)} />
+                                        <Switch id="hasRooftop" checked={building.hasRooftop} onCheckedChange={(checked) => handleStructureChange('hasRooftop', checked)} />
                                     </div>
                                 </div>
                             </div>
@@ -498,6 +526,20 @@ export default function BuildingPage() {
             {editingLevel && (
                 <LevelFormSheet level={editingLevel} buildingId={buildingId} isOpen={isLevelSheetOpen} onOpenChange={handleLevelSheetOpenChange} existingLevels={levels || []} />
             )}
+
+            <AlertDialog open={!!validationError} onOpenChange={() => setValidationError(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{validationError?.title}</AlertDialogTitle>
+                        <AlertDialogDescription>{validationError?.description}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setValidationError(null)}>OK</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </main>
     );
 }
+
+    
