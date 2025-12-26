@@ -34,7 +34,7 @@ export default function HomePage() {
   }, [firestore, buildings]);
 
   const { data: units } = useCollection(
-      unitsQuery ? query(collection(firestore, 'buildings', buildings![0].id, 'units')) : null
+      unitsQuery && buildings && buildings.length > 0 ? query(collection(firestore, 'buildings', buildings[0].id, 'units')) : null
       // A bit of a hack to satisfy useCollection, we really need a multi-query hook.
       // We will just use getDocs inside the component that needs all units.
   );

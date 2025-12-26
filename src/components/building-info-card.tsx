@@ -75,4 +75,3 @@ export function BuildingInfoCard({ building }: { building: Building }) {
         </Card>
     );
 }
-

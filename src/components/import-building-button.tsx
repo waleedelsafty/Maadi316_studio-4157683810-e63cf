@@ -32,11 +32,19 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
             try {
                 const result = e.target?.result;
                 if (!result) throw new Error("File could not be read.");
-                const data = JSON.parse(result as string);
-                setPreviewData({ format: 'json', data });
+                
+                let data: any;
+                if (file.name.endsWith('.json')) {
+                    data = JSON.parse(result as string);
+                     setPreviewData({ format: 'json', data });
+                } else {
+                    // For excel, we need to implement a more robust parsing
+                    throw new Error("Excel import is not fully supported yet.");
+                }
+
                 setIsPreviewOpen(true);
             } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Parse Failed', description: `Could not read the JSON file. Error: ${error.message}` });
+                toast({ variant: 'destructive', title: 'Parse Failed', description: `Could not read the file. Error: ${error.message}` });
             } finally {
                 setIsImporting(false);
             }
@@ -57,16 +65,16 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
 
         setIsImporting(true);
         try {
-            const buildingFileData = data.data;
+            const importedData = data.data;
 
-            if (!buildingFileData) {
-                throw new Error("Imported file appears to be empty or corrupted.");
+            if (!importedData) {
+                 throw new Error("Imported file appears to be empty or corrupted.");
             }
-            if (!buildingFileData.Building_name) {
-                throw new Error("Could not find 'Building_name' field in the imported file.");
+            if (!importedData.Building_name) {
+                throw new Error("Could not find 'Building_name' in the imported file.");
             }
             
-            const { id, ownerId, createdAt, floors, units, levels, ...buildingCore } = buildingFileData;
+            const { id, ownerId, createdAt, floors, units, levels, ...buildingCore } = importedData;
             
             let finalBuildingName = buildingCore.Building_name;
             const existingNames = new Set((existingBuildings || []).map(b => b.Building_name));
