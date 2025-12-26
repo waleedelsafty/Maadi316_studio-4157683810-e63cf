@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
-import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard, Trash2, Palette } from 'lucide-react';
+import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard, Trash2, Palette, Code } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { ThemeToggle } from './theme-toggle';
 
@@ -66,6 +66,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
     if (pathname === '/settings/buildings') return 'My Buildings';
     if (pathname === '/settings/recycle-bin') return 'Recycle Bin';
     if (pathname === '/settings/theme') return 'Theme Editor';
+    if (pathname === '/settings/css-overrides') return 'CSS Overrides';
     return 'Dashboard';
   }
 
@@ -137,6 +138,18 @@ export function MainNav({ children }: { children: React.ReactNode }) {
                     <Link href="/settings/theme">
                         <Palette />
                         <span>Theme</span>
+                    </Link>
+                </SidebarMenuButton>
+             </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={pathname.startsWith('/settings/css-overrides')}
+                  tooltip="CSS Overrides"
+                >
+                    <Link href="/settings/css-overrides">
+                        <Code />
+                        <span>CSS Overrides</span>
                     </Link>
                 </SidebarMenuButton>
              </SidebarMenuItem>

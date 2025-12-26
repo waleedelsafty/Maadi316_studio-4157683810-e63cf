@@ -14,7 +14,7 @@
  * And then apply the `card-content-override` class to the components you want to change.
  * Or, for a more global change, you can target the default classes directly:
  *
- * [data-id="card-content"] {
+ * .p-4 {
  *    padding: 0.5rem !important;
  * }
  *
