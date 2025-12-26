@@ -53,7 +53,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="w-full max-w-5xl mx-auto space-y-8">
+    <main className="w-full max-w-5xl space-y-8">
       <div className="flex items-center justify-between">
          <h2 className="text-2xl font-bold">Dashboard</h2>
       </div>
