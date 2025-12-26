@@ -106,8 +106,6 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
         ...submissionData,
         ownerId: user.uid,
         createdAt: serverTimestamp(),
-        floors: 0,
-        units: 0,
       };
       const buildingsCollectionRef = collection(firestore, 'buildings');
       addDoc(buildingsCollectionRef, newBuilding)
@@ -131,7 +129,7 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
   React.useEffect(() => {
     if (isOpen) {
       reset({
-        Building_name: building?.Building_name || '',
+        Building_name: (building as any)?.Building_name || (building as any)?.name || '',
         address: building?.address || '',
         hasBasement: building?.hasBasement || false,
         basementCount: building?.basementCount || 1,
@@ -155,7 +153,7 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
           </SheetHeader>
           <div className="grid gap-6 py-4">
               <div>
-                <Label htmlFor="Building_name">Name</Label>
+                <Label htmlFor="Building_name">Building Name</Label>
                 <Input id="Building_name" {...register('Building_name')} placeholder="e.g., 'Main Street Plaza'" />
                 {errors.Building_name && <p className="text-red-500 text-xs mt-1">{errors.Building_name.message as string}</p>}
               </div>
@@ -230,7 +228,7 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
                                 <Select onValueChange={(val) => field.onChange(Number(val))} defaultValue={String(field.value)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select number of levels" />
-                                    </SelectTrigger>
+                                    </Trigger>
                                     <SelectContent>
                                         {[1, 2, 3, 4].map(num => <SelectItem key={num} value={String(num)}>{num}</SelectItem>)}
                                     </SelectContent>

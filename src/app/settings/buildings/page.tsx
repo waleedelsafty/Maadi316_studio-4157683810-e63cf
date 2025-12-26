@@ -19,9 +19,11 @@ import { ImportBuildingButton } from '@/components/import-building-button';
 
 function BuildingRow({ building }: { building: Building }) {
     const firestore = useFirestore();
+    const buildingName = (building as any)?.Building_name || (building as any)?.name;
+
 
     const levelsQuery = useMemo(() => {
-        if (!firestore || !building.id) return null; // Guard against missing building.id
+        if (!firestore || !building.id) return null; 
         return query(collection(firestore, 'buildings', building.id, 'levels'));
     }, [firestore, building.id]);
 
@@ -43,7 +45,7 @@ function BuildingRow({ building }: { building: Building }) {
         return (
             <TableRow>
                 <TableCell colSpan={9} className="text-destructive text-center">
-                    Could not load level data for {building.Building_name}.
+                    Could not load level data for {buildingName}.
                 </TableCell>
             </TableRow>
         )
@@ -69,7 +71,7 @@ function BuildingRow({ building }: { building: Building }) {
 
     return (
         <TableRow>
-            <TableCell className="font-medium">{building.Building_name}</TableCell>
+            <TableCell className="font-medium">{buildingName}</TableCell>
             <TableCell>{building.address}</TableCell>
             <TableCell className="text-center">
                 {building.hasBasement ? building.basementCount : '—'}

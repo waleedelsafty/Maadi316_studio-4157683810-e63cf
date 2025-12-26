@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Building, Level, Unit } from '@/types';
+import type { Building } from '@/types';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { Skeleton } from './ui/skeleton';
 
 export function BuildingInfoCard({ building }: { building: Building }) {
     const firestore = useFirestore();
+    const buildingName = (building as any)?.Building_name || (building as any)?.name;
 
     const levelsQuery = useMemo(() => {
         if (!firestore) return null;
@@ -44,7 +45,7 @@ export function BuildingInfoCard({ building }: { building: Building }) {
             <CardHeader>
                 <div className="flex justify-between items-start">
                     <div>
-                        <CardTitle>{building.Building_name}</CardTitle>
+                        <CardTitle>{buildingName}</CardTitle>
                         <CardDescription>{building.address}</CardDescription>
                     </div>
                      <Button size="sm" asChild>

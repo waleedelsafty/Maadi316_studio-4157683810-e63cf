@@ -318,11 +318,12 @@ export default function BuildingPage() {
     }
 
     const handleExportExcel = () => {
-        if (!checkDataForExport() || !building || !levels || !units || !building.Building_name) return;
+        const buildingName = (building as any)?.Building_name || (building as any)?.name;
+        if (!checkDataForExport() || !building || !levels || !units || !buildingName) return;
 
         // 1. Prepare data for sheets
         const buildingInfoData = [
-            { Key: 'Building Name', Value: building.Building_name },
+            { Key: 'Building Name', Value: buildingName },
             { Key: 'Address', Value: building.address },
             { Key: 'Has Basement', Value: building.hasBasement ? `Yes (${building.basementCount || 1} level/s)`: 'No' },
             { Key: 'Has Mezzanine', Value: building.hasMezzanine ? `Yes (${building.mezzanineCount || 1} level/s)`: 'No' },
@@ -358,28 +359,32 @@ export default function BuildingPage() {
         XLSX.utils.book_append_sheet(wb, wsUnits, "Units");
 
         // 4. Write workbook and trigger download
-        const fileName = `${building.Building_name.replace(/\s+/g, '_')}_Export.xlsx`;
+        const fileName = `${buildingName.replace(/\s+/g, '_')}_Export.xlsx`;
         XLSX.writeFile(wb, fileName);
 
         toast({ title: 'Export Complete', description: `Building data saved to ${fileName}.` });
     };
     
     const handleExportJson = () => {
-        if (!checkDataForExport() || !building || !levels || !units || !building.Building_name) return;
+        const buildingName = (building as any)?.Building_name || (building as any)?.name;
+        if (!checkDataForExport() || !building || !levels || !units || !buildingName) return;
 
         const exportData = {
             ...building,
+            Building_name: buildingName,
             levels: sortedLevels,
             units: units,
         };
 
         const jsonString = JSON.stringify(exportData, null, 2);
         const blob = new Blob([jsonString], { type: "application/json" });
-        const fileName = `${building.Building_name.replace(/\s+/g, '_')}_Export.json`;
+        const fileName = `${buildingName.replace(/\s+/g, '_')}_Export.json`;
         saveAs(blob, fileName);
 
         toast({ title: 'Export Complete', description: `Building data saved to ${fileName}.` });
     }
+    
+    const buildingName = (building as any)?.Building_name || (building as any)?.name;
 
     if (building && user && building.ownerId !== user.uid) {
         return (
@@ -432,7 +437,7 @@ export default function BuildingPage() {
                      {building ? (
                         <>
                            <div className="space-y-2">
-                                <InlineEditField label="Building Name" value={building.Building_name} onSave={(value) => handleUpdateBuilding('Building_name', value)} />
+                                <InlineEditField label="Building Name" value={buildingName} onSave={(value) => handleUpdateBuilding('Building_name', value)} />
                                 <InlineEditField label="Address" value={building.address} onSave={(value) => handleUpdateBuilding('address', value)} />
                            </div>
                             <div className="space-y-2 pt-2">
