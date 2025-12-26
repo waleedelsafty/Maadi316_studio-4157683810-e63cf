@@ -110,7 +110,8 @@ export default function BuildingsSettingsPage() {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, 'buildings'),
-      where('ownerId', '==', user.uid)
+      where('ownerId', '==', user.uid),
+      where('isDeleted', '!=', true)
     );
   }, [user, firestore]);
 

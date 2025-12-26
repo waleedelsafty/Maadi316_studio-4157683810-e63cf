@@ -94,6 +94,10 @@
         "hasRooftop": {
           "type": "boolean",
           "description": "Indicates if the building has a usable rooftop level."
+        },
+        "isDeleted": {
+          "type": "boolean",
+          "description": "A flag to indicate if the building has been soft-deleted."
         }
       },
       "required": ["Building_name", "address", "ownerId", "createdAt"]

@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
@@ -72,6 +72,36 @@ function LevelRow({ level, buildingId, onDelete, unitCount }: { level: Level; bu
         </TableRow>
     );
 }
+
+function SoftDeleteDialog({ onConfirm, buildingName }: { onConfirm: () => void, buildingName: string }) {
+    const [inputValue, setInputValue] = useState("");
+    const isMatch = inputValue === "delete";
+
+    return (
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will move the building "{buildingName}" to the recycle bin. It will not be visible in the main app but can be restored later.
+                    <br/><br/>
+                    To confirm, please type **delete** in the box below.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Input 
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder='delete'
+            />
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onConfirm} disabled={!isMatch}>
+                    Delete Building
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    );
+}
+
 
 type SortKey = 'name' | 'type' | 'units';
 type SortDirection = 'asc' | 'desc';
@@ -216,6 +246,12 @@ export default function BuildingPage() {
         if (!buildingRef) return;
 
         let updateData: { [key: string]: any } = { [field]: value };
+        
+        // When renaming, ensure we use the new field
+        if (field === 'Building_name') {
+            updateData = { Building_name: value };
+        }
+
 
         // Auto-set counts when enabling a feature for the first time
         if (field === 'hasBasement' && value === true && !building?.basementCount) {
@@ -318,8 +354,14 @@ export default function BuildingPage() {
     }
 
     const handleExportExcel = () => {
-        const buildingName = (building as any)?.Building_name || (building as any)?.name;
-        if (!checkDataForExport() || !building || !levels || !units || !buildingName) return;
+        if (!checkDataForExport() || !building) return;
+
+        const buildingName = (building as any).Building_name || (building as any).name;
+        if (!buildingName) {
+            toast({ variant: 'destructive', title: 'Export Failed', description: 'Building name is missing.' });
+            return;
+        }
+
 
         // 1. Prepare data for sheets
         const buildingInfoData = [
@@ -338,7 +380,7 @@ export default function BuildingPage() {
         }));
 
         const levelsMap = new Map(levels.map(l => [l.id, l.name]));
-        const unitsData = units.map(unit => ({
+        const unitsData = (units || []).map(unit => ({
             'Unit #': unit.unitNumber,
             'Level': levelsMap.get(unit.levelId) || 'Unknown',
             'Type': unit.type,
@@ -366,8 +408,12 @@ export default function BuildingPage() {
     };
     
     const handleExportJson = () => {
-        const buildingName = (building as any)?.Building_name || (building as any)?.name;
-        if (!checkDataForExport() || !building || !levels || !units || !buildingName) return;
+        if (!checkDataForExport() || !building) return;
+        const buildingName = (building as any).Building_name || (building as any).name;
+        if (!buildingName) {
+            toast({ variant: 'destructive', title: 'Export Failed', description: 'Building name is missing.' });
+            return;
+        }
 
         const exportData = {
             ...building,
@@ -383,6 +429,16 @@ export default function BuildingPage() {
 
         toast({ title: 'Export Complete', description: `Building data saved to ${fileName}.` });
     }
+
+    const handleSoftDelete = async () => {
+        if (!buildingRef) return;
+        await updateDoc(buildingRef, { isDeleted: true });
+        toast({
+            title: "Building Deleted",
+            description: "The building has been moved to the recycle bin."
+        });
+        router.push('/');
+    };
     
     const buildingName = (building as any)?.Building_name || (building as any)?.name;
 
@@ -393,6 +449,18 @@ export default function BuildingPage() {
                 <p>You do not have permission to view this building.</p>
                 <Button asChild className="mt-4">
                     <Link href="/">Go to Homepage</Link>
+                </Button>
+            </div>
+        )
+    }
+
+    if (building?.isDeleted) {
+        return (
+            <div className="text-center">
+                <p className="text-2xl font-bold">Building Deleted</p>
+                <p>This building is in the recycle bin. You can restore it from the settings page.</p>
+                 <Button asChild className="mt-4">
+                    <Link href="/settings/recycle-bin">Go to Recycle Bin</Link>
                 </Button>
             </div>
         )
@@ -561,6 +629,27 @@ export default function BuildingPage() {
                      </div>
                 </CardContent>
             </Card>
+
+            <Card className="border-destructive">
+                <CardHeader>
+                    <CardTitle>Danger Zone</CardTitle>
+                    <CardDescription>
+                        This action is irreversible. Once deleted, the building will be moved to the recycle bin.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={!building}>
+                                <Trash2 className="mr-2" />
+                                Delete Building
+                            </Button>
+                        </AlertDialogTrigger>
+                         {building && <SoftDeleteDialog onConfirm={handleSoftDelete} buildingName={buildingName} />}
+                     </AlertDialog>
+                </CardContent>
+            </Card>
+
 
             <BuildingFormSheet building={building} isOpen={isBuildingSheetOpen} onOpenChange={setIsBuildingSheetOpen} />
 

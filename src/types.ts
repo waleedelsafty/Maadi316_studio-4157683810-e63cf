@@ -13,6 +13,7 @@ export type Building = {
     mezzanineCount?: number;
     hasPenthouse?: boolean;
     hasRooftop?: boolean;
+    isDeleted?: boolean;
 };
 
 export type Level = {

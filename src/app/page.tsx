@@ -16,7 +16,11 @@ export default function HomePage() {
 
   const buildingsQuery = useMemo(() => {
     if (!user || !firestore) return null;
-    return query(collection(firestore, 'buildings'), where('ownerId', '==', user.uid));
+    return query(
+      collection(firestore, 'buildings'), 
+      where('ownerId', '==', user.uid),
+      where('isDeleted', '!=', true)
+    );
   }, [user, firestore]);
 
   const { data: buildings } = useCollection(buildingsQuery);

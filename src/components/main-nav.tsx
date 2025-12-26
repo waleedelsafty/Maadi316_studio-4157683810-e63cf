@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
-import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard } from 'lucide-react';
+import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard, Trash2 } from 'lucide-react';
 import { Separator } from './ui/separator';
 
 export function MainNav({ children }: { children: React.ReactNode }) {
@@ -63,6 +63,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
     }
     if (pathname === '/settings/general') return 'General Settings';
     if (pathname === '/settings/buildings') return 'My Buildings';
+    if (pathname === '/settings/recycle-bin') return 'Recycle Bin';
     return 'Dashboard';
   }
 
@@ -116,6 +117,18 @@ export function MainNav({ children }: { children: React.ReactNode }) {
              <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
+                  isActive={pathname === '/settings/recycle-bin'}
+                  tooltip="Recycle Bin"
+                >
+                    <Link href="/settings/recycle-bin">
+                        <Trash2 />
+                        <span>Recycle Bin</span>
+                    </Link>
+                </SidebarMenuButton>
+             </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild
                   isActive={pathname === '/settings/general'}
                   tooltip="Settings"
                 >
@@ -153,5 +166,3 @@ export function MainNav({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
-    
