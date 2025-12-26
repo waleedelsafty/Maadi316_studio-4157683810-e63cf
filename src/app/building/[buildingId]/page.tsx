@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
@@ -41,22 +41,13 @@ const levelTypeOrder: Record<Level['type'], number> = {
 };
 
 
-function LevelRow({ level, buildingId, onDelete }: { level: Level; buildingId: string; onDelete: (levelId: string) => void; }) {
-    const firestore = useFirestore();
-
-    const unitsQuery = useMemo(() => {
-        if (!firestore || !buildingId || !level.id) return null;
-        return query(collection(firestore, 'buildings', buildingId, 'units'), where('levelId', '==', level.id));
-    }, [firestore, buildingId, level.id]);
-
-    const { data: units } = useCollection(unitsQuery);
-
+function LevelRow({ level, buildingId, onDelete, unitCount }: { level: Level; buildingId: string; onDelete: (levelId: string) => void; unitCount: number | null }) {
     return (
         <TableRow>
             <TableCell className="font-semibold">{level.name}</TableCell>
             <TableCell>{level.type}{level.type === 'Typical Floor' && ` - Floor ${level.floorNumber}`}</TableCell>
             <TableCell className="text-center">
-                {units ? units.length : <Skeleton className="h-5 w-5 mx-auto" />}
+                {unitCount !== null ? unitCount : <Skeleton className="h-5 w-5 mx-auto" />}
             </TableCell>
             <TableCell className="text-right">
                 <div className="flex gap-2 justify-end">
@@ -82,6 +73,8 @@ function LevelRow({ level, buildingId, onDelete }: { level: Level; buildingId: s
     );
 }
 
+type SortKey = 'name' | 'type' | 'units';
+type SortDirection = 'asc' | 'desc';
 
 export default function BuildingPage() {
     const { buildingId } = useParams() as { buildingId: string };
@@ -95,9 +88,12 @@ export default function BuildingPage() {
     const [levelName, setLevelName] = useState('');
     const [levelType, setLevelType] = useState<Level['type'] | ''>('');
     const [floorNumber, setFloorNumber] = useState<number | ''>('');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [isLevelSheetOpen, setIsLevelSheetOpen] = useState(false);
     const [editingLevel, setEditingLevel] = useState<Level | null>(null);
+
+    // State for Sorting
+    const [sortKey, setSortKey] = useState<SortKey>('type');
+    const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
     // State for common UI
     const [isBuildingSheetOpen, setIsBuildingSheetOpen] = useState(false);
@@ -123,6 +119,16 @@ export default function BuildingPage() {
         return query(collection(firestore, 'buildings', buildingId, 'units'));
     }, [firestore, buildingId]);
     const { data: units } = useCollection(unitsQuery);
+
+    const unitCountsByLevel = useMemo(() => {
+        if (!units) return new Map<string, number>();
+        const counts = new Map<string, number>();
+        for (const unit of units) {
+            counts.set(unit.levelId, (counts.get(unit.levelId) || 0) + 1);
+        }
+        return counts;
+    }, [units]);
+
 
     const availableLevelTypes = useMemo(() => {
         if (!levels || !building) return levelTypes;
@@ -163,27 +169,48 @@ export default function BuildingPage() {
     const sortedLevels = useMemo(() => {
         if (!levels) return [];
         return [...levels].sort((a, b) => {
-            const typeA = levelTypeOrder[a.type];
-            const typeB = levelTypeOrder[b.type];
+            const dir = sortDirection === 'asc' ? 1 : -1;
 
-            if (typeA !== typeB) {
-                return sortOrder === 'asc' ? typeA - typeB : typeB - a.name.localeCompare(b.name);
-            }
+            switch (sortKey) {
+                case 'name':
+                    return a.name.localeCompare(b.name) * dir;
+                case 'units':
+                    const aUnits = unitCountsByLevel.get(a.id) || 0;
+                    const bUnits = unitCountsByLevel.get(b.id) || 0;
+                    return (aUnits - bUnits) * dir;
+                case 'type':
+                default:
+                    const typeA = levelTypeOrder[a.type];
+                    const typeB = levelTypeOrder[b.type];
+                    if (typeA !== typeB) return (typeA - typeB) * dir;
 
-            if (a.type === 'Typical Floor') {
-                 return sortOrder === 'asc' 
-                    ? (a.floorNumber || 0) - (b.floorNumber || 0) 
-                    : (b.floorNumber || 0) - (a.floorNumber || 0);
+                    // Fallback sorting for items with the same type
+                    if (a.type === 'Typical Floor') {
+                        return ((a.floorNumber || 0) - (b.floorNumber || 0)) * dir;
+                    }
+                    if (a.type === 'Basement') {
+                        return a.name.localeCompare(b.name) * (dir * -1); // Higher basement numbers first
+                    }
+                    return a.name.localeCompare(b.name) * dir;
             }
-             if (a.type === 'Basement') {
-                 return sortOrder === 'asc' 
-                    ? a.name.localeCompare(b.name) * -1
-                    : b.name.localeCompare(a.name) * -1;
-            }
-            
-            return sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
         });
-    }, [levels, sortOrder]);
+    }, [levels, sortKey, sortDirection, unitCountsByLevel]);
+
+    const handleSort = (key: SortKey) => {
+        if (sortKey === key) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortKey(key);
+            setSortDirection('asc');
+        }
+    };
+
+    const renderSortIcon = (key: SortKey) => {
+        if (sortKey !== key) {
+            return <ChevronsUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
+        }
+        return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
+    };
 
     const handleUpdateBuilding = async (field: keyof Building, value: string | boolean | number) => {
         if (!buildingRef) return;
@@ -401,16 +428,16 @@ export default function BuildingPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-2">
                      {building ? (
                         <>
                            <div className="space-y-2">
                                 <InlineEditField label="Building Name" value={building.name} onSave={(value) => handleUpdateBuilding('name', value)} />
                                 <InlineEditField label="Address" value={building.address} onSave={(value) => handleUpdateBuilding('address', value)} />
                            </div>
-                            <div className="space-y-4 pt-2">
+                            <div className="space-y-2 pt-2">
                                 <h4 className="font-medium text-sm">Building Structure</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                                     <div className="flex items-center justify-between border-b pb-2">
                                         <Label htmlFor="hasBasement" className="text-sm font-medium text-muted-foreground">Has Basement</Label>
                                         <div className="flex items-center gap-4">
@@ -492,26 +519,35 @@ export default function BuildingPage() {
                         </form>
                     )}
                     <div className="space-y-4">
-                         <div className="flex justify-end">
-                            <Button variant="outline" size="sm" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
-                                {sortOrder === 'asc' ? <ArrowUp className="mr-2 h-4 w-4" /> : <ArrowDown className="mr-2 h-4 w-4" />}
-                                Sort: {sortOrder === 'asc' ? 'Bottom-Up' : 'Top-Down'}
-                            </Button>
-                        </div>
                         {sortedLevels && sortedLevels.length > 0 ? (
                             <div className="border rounded-lg">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Level Name</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead className="text-center">Units</TableHead>
+                                            <TableHead>
+                                                 <Button variant="ghost" onClick={() => handleSort('name')} className="px-0">
+                                                    Level Name
+                                                    {renderSortIcon('name')}
+                                                </Button>
+                                            </TableHead>
+                                            <TableHead>
+                                                <Button variant="ghost" onClick={() => handleSort('type')} className="px-0">
+                                                    Type
+                                                    {renderSortIcon('type')}
+                                                </Button>
+                                            </TableHead>
+                                            <TableHead className="text-center">
+                                                <Button variant="ghost" onClick={() => handleSort('units')} className="px-0 mx-auto">
+                                                    Units
+                                                    {renderSortIcon('units')}
+                                                </Button>
+                                            </TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {sortedLevels.map((level) => (
-                                            <LevelRow key={level.id} level={level} buildingId={buildingId} onDelete={handleDeleteLevel} />
+                                            <LevelRow key={level.id} level={level} buildingId={buildingId} onDelete={handleDeleteLevel} unitCount={unitCountsByLevel.get(level.id) || 0} />
                                         ))}
                                     </TableBody>
                                 </Table>
