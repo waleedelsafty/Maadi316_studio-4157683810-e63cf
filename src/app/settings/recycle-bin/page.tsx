@@ -128,12 +128,15 @@ export default function RecycleBinPage() {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, 'buildings'),
-      where('ownerId', '==', user.uid),
-      where('isDeleted', '==', true)
+      where('ownerId', '==', user.uid)
     );
   }, [user, firestore]);
 
-  const { data: buildings } = useCollection(deletedBuildingsQuery);
+  const { data: allBuildings } = useCollection(deletedBuildingsQuery);
+
+  const buildings = useMemo(() => {
+    return allBuildings?.filter(b => b.isDeleted);
+  }, [allBuildings]);
 
   if (!user) {
     return null; // Or a loading spinner

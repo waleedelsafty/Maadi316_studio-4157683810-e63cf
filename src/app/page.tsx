@@ -18,12 +18,16 @@ export default function HomePage() {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, 'buildings'), 
-      where('ownerId', '==', user.uid),
-      where('isDeleted', '!=', true)
+      where('ownerId', '==', user.uid)
     );
   }, [user, firestore]);
 
-  const { data: buildings } = useCollection(buildingsQuery);
+  const { data: allBuildings } = useCollection(buildingsQuery);
+
+  const buildings = useMemo(() => {
+    return allBuildings?.filter(b => !b.isDeleted) || null;
+  }, [allBuildings]);
+
 
   const unitsQuery = useMemo(() => {
     if (!firestore || !buildings || buildings.length === 0) return null;
