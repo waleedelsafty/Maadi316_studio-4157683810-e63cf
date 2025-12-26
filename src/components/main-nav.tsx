@@ -18,22 +18,17 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
-import { Home, LogOut, Settings, Building, User as UserIcon, ChevronDown } from 'lucide-react';
+import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard } from 'lucide-react';
 import { Separator } from './ui/separator';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
 export function MainNav({ children }: { children: React.ReactNode }) {
   const user = useUser();
   const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [isSettingsOpen, setIsSettingsOpen] = React.useState(pathname.startsWith('/settings'));
 
   const handleSignOut = async () => {
     if (!auth) return;
@@ -53,16 +48,13 @@ export function MainNav({ children }: { children: React.ReactNode }) {
       .join('');
   };
   
-  React.useEffect(() => {
-    setIsSettingsOpen(pathname.startsWith('/settings'));
-  }, [pathname]);
 
   if (!user) {
     return <>{children}</>;
   }
 
   const getPageTitle = () => {
-    if (pathname === '/') return 'Home';
+    if (pathname === '/') return 'Dashboard';
     if (pathname.startsWith('/building/')) {
         if (pathname.includes('/level/')) {
             return 'Level Details';
@@ -70,9 +62,8 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         return 'Building Details';
     }
     if (pathname === '/settings/general') return 'General Settings';
-    if (pathname === '/settings/buildings') return 'Manage Buildings';
-    if (pathname.startsWith('/settings')) return 'Settings';
-    return 'Home';
+    if (pathname === '/settings/buildings') return 'My Buildings';
+    return 'Dashboard';
   }
 
 
@@ -102,45 +93,38 @@ export function MainNav({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton 
                   asChild
                   isActive={pathname === '/'}
-                  tooltip="Home"
+                  tooltip="Dashboard"
                 >
                     <Link href="/">
-                        <Home />
-                        <span>Home</span>
+                        <LayoutDashboard />
+                        <span>Dashboard</span>
                     </Link>
                 </SidebarMenuButton>
              </SidebarMenuItem>
-             <Collapsible open={isSettingsOpen} onOpenChange={setIsSettingsOpen} className="w-full">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                      <SidebarMenuButton
-                        isActive={pathname.startsWith('/settings')}
-                        tooltip="Settings"
-                        className="justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Settings />
-                          <span>Settings</span>
-                        </div>
-                        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isSettingsOpen ? 'rotate-180' : ''}`} />
-                      </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                </SidebarMenuItem>
-                <CollapsibleContent>
-                    <SidebarMenuSub>
-                        <SidebarMenuSubItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === '/settings/general'}>
-                                <Link href="/settings/general"><UserIcon /> General</Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                        <SidebarMenuSubItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === '/settings/buildings'}>
-                                <Link href="/settings/buildings"><Building /> Buildings</Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                    </SidebarMenuSub>
-                </CollapsibleContent>
-             </Collapsible>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={pathname === '/settings/buildings'}
+                  tooltip="My Buildings"
+                >
+                    <Link href="/settings/buildings">
+                        <Building />
+                        <span>My Buildings</span>
+                    </Link>
+                </SidebarMenuButton>
+             </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={pathname === '/settings/general'}
+                  tooltip="Settings"
+                >
+                    <Link href="/settings/general">
+                        <Settings />
+                        <span>Settings</span>
+                    </Link>
+                </SidebarMenuButton>
+             </SidebarMenuItem>
            </SidebarMenu>
         </SidebarContent>
         <Separator />
