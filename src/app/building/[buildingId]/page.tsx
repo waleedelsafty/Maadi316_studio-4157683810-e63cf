@@ -367,8 +367,8 @@ export default function BuildingPage() {
     }
 
     return (
-        <main className="w-full max-w-5xl mx-auto space-y-8">
-            <div className="mb-4">
+        <main className="w-full max-w-5xl mx-auto space-y-6">
+            <div className="mb-2">
                 <Button variant="ghost" onClick={() => router.back()} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
                     <ArrowLeft className="h-4 w-4" /> Back
                 </Button>
@@ -401,15 +401,15 @@ export default function BuildingPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4">
                      {building ? (
                         <>
-                           <div className="space-y-4">
+                           <div className="space-y-2">
                                 <InlineEditField label="Building Name" value={building.name} onSave={(value) => handleUpdateBuilding('name', value)} />
                                 <InlineEditField label="Address" value={building.address} onSave={(value) => handleUpdateBuilding('address', value)} />
                            </div>
-                            <div className="space-y-4 pt-4">
-                                <h4 className="font-medium">Building Structure</h4>
+                            <div className="space-y-4 pt-2">
+                                <h4 className="font-medium text-sm">Building Structure</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                     <div className="flex items-center justify-between border-b pb-2">
                                         <Label htmlFor="hasBasement" className="text-sm font-medium text-muted-foreground">Has Basement</Label>
@@ -471,7 +471,7 @@ export default function BuildingPage() {
                          {!isAddingLevel && ( <Button onClick={() => setIsAddingLevel(true)}>Add New Level</Button> )}
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4">
                     {isAddingLevel && (
                         <form onSubmit={handleAddLevel} className="space-y-4 p-4 border rounded-lg bg-muted/50">
                             <h3 className="font-medium">Add a New Level</h3>
