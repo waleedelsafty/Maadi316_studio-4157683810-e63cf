@@ -1,0 +1,21 @@
+/*
+ * Custom Overrides
+ *
+ * Use this file to add your own custom CSS to override Tailwind or component styles.
+ * Rules in this file will be loaded last, giving them higher priority.
+ *
+ * Example:
+ * To reduce the padding on all card content areas, you could add:
+ *
+ * .card-content-override {
+ *   padding: 0.5rem !important;
+ * }
+ *
+ * And then apply the `card-content-override` class to the components you want to change.
+ * Or, for a more global change, you can target the default classes directly:
+ *
+ * [data-id="card-content"] {
+ *    padding: 0.5rem !important;
+ * }
+ *
+ */
