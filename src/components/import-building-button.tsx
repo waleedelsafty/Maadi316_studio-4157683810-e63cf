@@ -11,8 +11,6 @@ import type { Building, Level, Unit } from '@/types';
 import { Upload } from 'lucide-react';
 
 type ImportedBuilding = Omit<Building, 'id' | 'createdAt' | 'ownerId'>;
-type ImportedLevel = Omit<Level, 'id' | 'createdAt'>;
-type ImportedUnit = Omit<Unit, 'id' | 'createdAt' | 'levelId'> & { originalLevelName?: string };
 
 
 export function ImportBuildingButton({ existingBuildings }: { existingBuildings: Building[] }) {
@@ -50,13 +48,13 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
         try {
             if (!firestore || !user) throw new Error("Authentication error.");
 
-            let buildingData: ImportedBuilding;
+            let buildingData: Partial<ImportedBuilding>;
             
             if (format === 'json') {
-                const data = JSON.parse(fileContent as string);
+                const importedJson = JSON.parse(fileContent as string);
                 
-                // Separate building properties from levels and units
-                const { levels, units, id, ownerId, createdAt, ...restOfBuilding } = data;
+                // Correctly extract top-level properties, ignoring nested arrays for now
+                const { levels, units, id, ownerId, createdAt, ...restOfBuilding } = importedJson;
                 buildingData = restOfBuilding;
 
             } else { // xlsx
@@ -64,7 +62,8 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
                 
                 const buildingSheet = workbook.Sheets['Building Info'];
                 if (!buildingSheet) throw new Error("Missing 'Building Info' worksheet in the Excel file.");
-                const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet);
+                
+                const buildingInfoJson: any[] = XLSX.utils.sheet_to_json(buildingSheet, { header: ["Key", "Value"], skipHeader: false });
                 
                 const infoMap = buildingInfoJson.reduce((acc, row) => {
                     acc[row.Key] = row.Value;
@@ -97,10 +96,18 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
             }
 
             const newBuildingDoc: Omit<Building, 'id'> = {
-                ...buildingData,
                 name: finalBuildingName,
+                address: buildingData.address || 'N/A',
+                hasBasement: buildingData.hasBasement || false,
+                basementCount: buildingData.basementCount || 0,
+                hasMezzanine: buildingData.hasMezzanine || false,
+                mezzanineCount: buildingData.mezzanineCount || 0,
+                hasPenthouse: buildingData.hasPenthouse || false,
+                hasRooftop: buildingData.hasRooftop || false,
                 ownerId: user.uid,
                 createdAt: serverTimestamp(),
+                floors: 0, // Will be updated later
+                units: 0, // Will be updated later
             };
 
             await addDoc(collection(firestore, 'buildings'), newBuildingDoc);
