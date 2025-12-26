@@ -1,7 +1,7 @@
 
 export type Building = {
     id: string;
-    name: string;
+    Building_name: string;
     address: string;
     ownerId: string;
     createdAt: any; // Firestore Timestamp

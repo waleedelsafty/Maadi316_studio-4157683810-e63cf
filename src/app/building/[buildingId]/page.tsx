@@ -322,7 +322,7 @@ export default function BuildingPage() {
 
         // 1. Prepare data for sheets
         const buildingInfoData = [
-            { Key: 'Building Name', Value: building.name },
+            { Key: 'Building Name', Value: building.Building_name },
             { Key: 'Address', Value: building.address },
             { Key: 'Has Basement', Value: building.hasBasement ? `Yes (${building.basementCount || 1} level/s)`: 'No' },
             { Key: 'Has Mezzanine', Value: building.hasMezzanine ? `Yes (${building.mezzanineCount || 1} level/s)`: 'No' },
@@ -358,7 +358,7 @@ export default function BuildingPage() {
         XLSX.utils.book_append_sheet(wb, wsUnits, "Units");
 
         // 4. Write workbook and trigger download
-        const fileName = `${building.name.replace(/\s+/g, '_')}_Export.xlsx`;
+        const fileName = `${building.Building_name.replace(/\s+/g, '_')}_Export.xlsx`;
         XLSX.writeFile(wb, fileName);
 
         toast({ title: 'Export Complete', description: `Building data saved to ${fileName}.` });
@@ -375,7 +375,7 @@ export default function BuildingPage() {
 
         const jsonString = JSON.stringify(exportData, null, 2);
         const blob = new Blob([jsonString], { type: "application/json" });
-        const fileName = `${building.name.replace(/\s+/g, '_')}_Export.json`;
+        const fileName = `${building.Building_name.replace(/\s+/g, '_')}_Export.json`;
         saveAs(blob, fileName);
 
         toast({ title: 'Export Complete', description: `Building data saved to ${fileName}.` });
@@ -432,7 +432,7 @@ export default function BuildingPage() {
                      {building ? (
                         <>
                            <div className="space-y-2">
-                                <InlineEditField label="Building Name" value={building.name} onSave={(value) => handleUpdateBuilding('name', value)} />
+                                <InlineEditField label="Building Name" value={building.Building_name} onSave={(value) => handleUpdateBuilding('Building_name', value)} />
                                 <InlineEditField label="Address" value={building.address} onSave={(value) => handleUpdateBuilding('address', value)} />
                            </div>
                             <div className="space-y-2 pt-2">

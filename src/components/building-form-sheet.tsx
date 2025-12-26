@@ -27,7 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formSchema = z.object({
-  name: z.string().min(1, 'Building name is required'),
+  Building_name: z.string().min(1, 'Building name is required'),
   address: z.string().min(1, 'Building address is required'),
   hasBasement: z.boolean().default(false),
   basementCount: z.number().optional(),
@@ -59,7 +59,7 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
   } = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
+      Building_name: '',
       address: '',
       hasBasement: false,
       basementCount: 1,
@@ -131,7 +131,7 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
   React.useEffect(() => {
     if (isOpen) {
       reset({
-        name: building?.name || '',
+        Building_name: building?.Building_name || '',
         address: building?.address || '',
         hasBasement: building?.hasBasement || false,
         basementCount: building?.basementCount || 1,
@@ -155,9 +155,9 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
           </SheetHeader>
           <div className="grid gap-6 py-4">
               <div>
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" {...register('name')} placeholder="e.g., 'Main Street Plaza'" />
-                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message as string}</p>}
+                <Label htmlFor="Building_name">Name</Label>
+                <Input id="Building_name" {...register('Building_name')} placeholder="e.g., 'Main Street Plaza'" />
+                {errors.Building_name && <p className="text-red-500 text-xs mt-1">{errors.Building_name.message as string}</p>}
               </div>
               <div>
                 <Label htmlFor="address">Address</Label>

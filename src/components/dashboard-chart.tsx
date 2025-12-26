@@ -41,7 +41,7 @@ export function DashboardChart({ buildings }: { buildings: Building[] }) {
         const unitsRef = collection(firestore, 'buildings', building.id, 'units');
         const unitsSnapshot = await getDocs(unitsRef);
         data.push({
-          building: building.name,
+          building: building.Building_name,
           units: unitsSnapshot.size,
         });
       }

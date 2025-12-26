@@ -44,7 +44,7 @@ export function BuildingInfoCard({ building }: { building: Building }) {
             <CardHeader>
                 <div className="flex justify-between items-start">
                     <div>
-                        <CardTitle>{building.name}</CardTitle>
+                        <CardTitle>{building.Building_name}</CardTitle>
                         <CardDescription>{building.address}</CardDescription>
                     </div>
                      <Button size="sm" asChild>

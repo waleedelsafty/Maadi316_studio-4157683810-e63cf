@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { Building } from '@/types';
+import { collection, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import type { Building, Level, Unit } from '@/types';
 import { Upload } from 'lucide-react';
 import { ImportPreviewDialog, type ImportData } from './import-preview-dialog';
 
@@ -28,33 +28,24 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
         setIsImporting(true);
         const reader = new FileReader();
 
-        if (file.name.endsWith('.json')) {
-            reader.onload = (e) => handlePreview(e.target?.result as string, 'json');
-            reader.readAsText(file);
-        } else if (file.name.endsWith('.xlsx')) {
-             toast({ variant: 'destructive', title: 'Unsupported for now', description: 'Excel import is temporarily disabled.' });
-             setIsImporting(false);
-        } else {
-            toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please select a .json file.' });
-            setIsImporting(false);
-        }
+        reader.onload = (e) => {
+            try {
+                const result = e.target?.result;
+                if (!result) throw new Error("File could not be read.");
+                const data = JSON.parse(result as string);
+                setPreviewData({ format: 'json', data });
+                setIsPreviewOpen(true);
+            } catch (error: any) {
+                toast({ variant: 'destructive', title: 'Parse Failed', description: `Could not read the JSON file. Error: ${error.message}` });
+            } finally {
+                setIsImporting(false);
+            }
+        };
+
+        reader.readAsText(file);
 
         if(fileInputRef.current) {
             fileInputRef.current.value = '';
-        }
-    };
-    
-    const handlePreview = (fileContent: string | ArrayBuffer, format: 'json' | 'xlsx') => {
-        try {
-            if (format === 'json') {
-                const data = JSON.parse(fileContent as string);
-                setPreviewData({ format: 'json', data });
-                setIsPreviewOpen(true);
-            }
-        } catch (error: any) {
-             toast({ variant: 'destructive', title: 'Parse Failed', description: `Could not read the JSON file. Error: ${error.message}` });
-        } finally {
-            setIsImporting(false);
         }
     };
     
@@ -66,46 +57,33 @@ export function ImportBuildingButton({ existingBuildings }: { existingBuildings:
 
         setIsImporting(true);
         try {
-            let importedData: Partial<Building>;
-            
-            if (data.format === 'json') {
-                 // The actual building data is nested inside the 'data' property of the ImportData object.
-                 const buildingFileData = data.data;
+            const buildingFileData = data.data;
 
-                 if (!buildingFileData) {
-                     throw new Error("Imported file appears to be empty or corrupted.");
-                 }
-                 
-                 // Explicitly ignore id, ownerId, createdAt, levels, and units from the imported file
-                 const { id, ownerId, createdAt, floors, units, levels, ...buildingCore } = buildingFileData;
-                 importedData = buildingCore;
-            } else {
-                throw new Error("Excel format not supported yet in confirmation step.");
+            if (!buildingFileData) {
+                throw new Error("Imported file appears to be empty or corrupted.");
             }
-
-            if (!importedData) {
-                throw new Error("Failed to extract building data from the file.");
-            }
-            if (!importedData.name) {
-                throw new Error("Could not find a 'name' field in the imported building data.");
+            if (!buildingFileData.Building_name) {
+                throw new Error("Could not find 'Building_name' field in the imported file.");
             }
             
-            let finalBuildingName = importedData.name;
-            const existingNames = new Set((existingBuildings || []).map(b => b.name));
+            const { id, ownerId, createdAt, floors, units, levels, ...buildingCore } = buildingFileData;
+            
+            let finalBuildingName = buildingCore.Building_name;
+            const existingNames = new Set((existingBuildings || []).map(b => b.Building_name));
             if (existingNames.has(finalBuildingName)) {
                 const date = new Date().toISOString().split('T')[0];
                 finalBuildingName = `${finalBuildingName}_#2_${date}`;
             }
 
             const newBuildingDocData = {
-                name: finalBuildingName,
-                address: importedData.address || 'N/A',
-                hasBasement: importedData.hasBasement || false,
-                basementCount: importedData.basementCount || 0,
-                hasMezzanine: importedData.hasMezzanine || false,
-                mezzanineCount: importedData.mezzanineCount || 0,
-                hasPenthouse: importedData.hasPenthouse || false,
-                hasRooftop: importedData.hasRooftop || false,
+                Building_name: finalBuildingName,
+                address: buildingCore.address || 'N/A',
+                hasBasement: buildingCore.hasBasement || false,
+                basementCount: buildingCore.basementCount || 0,
+                hasMezzanine: buildingCore.hasMezzanine || false,
+                mezzanineCount: buildingCore.mezzanineCount || 0,
+                hasPenthouse: buildingCore.hasPenthouse || false,
+                hasRooftop: buildingCore.hasRooftop || false,
                 ownerId: user.uid,
                 createdAt: serverTimestamp(),
             };

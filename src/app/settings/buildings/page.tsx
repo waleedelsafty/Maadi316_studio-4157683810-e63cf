@@ -43,7 +43,7 @@ function BuildingRow({ building }: { building: Building }) {
         return (
             <TableRow>
                 <TableCell colSpan={9} className="text-destructive text-center">
-                    Could not load level data for {building.name}.
+                    Could not load level data for {building.Building_name}.
                 </TableCell>
             </TableRow>
         )
@@ -69,7 +69,7 @@ function BuildingRow({ building }: { building: Building }) {
 
     return (
         <TableRow>
-            <TableCell className="font-medium">{building.name}</TableCell>
+            <TableCell className="font-medium">{building.Building_name}</TableCell>
             <TableCell>{building.address}</TableCell>
             <TableCell className="text-center">
                 {building.hasBasement ? building.basementCount : '—'}
