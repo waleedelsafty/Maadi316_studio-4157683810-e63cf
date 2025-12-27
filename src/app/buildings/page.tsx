@@ -90,7 +90,7 @@ function BuildingRow({ building }: { building: Building }) {
     if (error) {
         return (
             <TableRow>
-                <TableCell colSpan={9} className="text-destructive text-center">
+                <TableCell colSpan={8} className="text-destructive text-center">
                     Could not load level data for {buildingName}.
                 </TableCell>
             </TableRow>
@@ -104,9 +104,8 @@ function BuildingRow({ building }: { building: Building }) {
                     <Skeleton className="h-5 w-32" />
                 </TableCell>
                 <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
-                <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
-                <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
+                <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
+                <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
@@ -139,15 +138,14 @@ function BuildingRow({ building }: { building: Building }) {
             </TableCell>
             <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" asChild>
+                     <Button variant="outline" size="sm" asChild>
                         <Link href={`/building/${building.id}`}>
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit Building</span>
+                            View Details
                         </Link>
                     </Button>
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                            <Button variant="destructive" size="sm">
                                 <Trash2 className="h-4 w-4" />
                                 <span className="sr-only">Delete Building</span>
                             </Button>
@@ -205,8 +203,8 @@ export default function BuildingsPage() {
                     <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Address</TableHead>
-                        <TableHead className="text-center">Basement</TableHead>
-                        <TableHead className="text-center">Mezzanine</TableHead>
+                        <TableHead className="text-center">Basement(s)</TableHead>
+                        <TableHead className="text-center">Mezzanine(s)</TableHead>
                         <TableHead className="text-center">Ground</TableHead>
                         <TableHead className="text-center">Typical Floors</TableHead>
                         <TableHead className="text-center">Penthouse</TableHead>
@@ -225,12 +223,12 @@ export default function BuildingsPage() {
                 <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Address</TableHead>
-                    <TableHead className="text-center">Basement</TableHead>
-                    <TableHead className="text-center">Mezzanine</TableHead>
+                    <TableHead className="text-center">Basement(s)</TableHead>
+                    <TableHead className="text-center">Mezzanine(s)</TableHead>
                     <TableHead className="text-center">Ground</TableHead>
                     <TableHead className="text-center">Typical Floors</TableHead>
                     <TableHead className="text-center">Penthouse</TableHead>
-                    <TableHead className="text-right">Rooftop</TableHead>
+                    <TableHead className="text-center">Rooftop</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
