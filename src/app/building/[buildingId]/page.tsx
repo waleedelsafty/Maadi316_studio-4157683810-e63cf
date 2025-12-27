@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2, DollarSign } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2, DollarSign, Search } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
@@ -120,17 +120,18 @@ export default function BuildingPage() {
     const [levelName, setLevelName] = useState('');
     const [levelType, setLevelType] = useState<Level['type'] | ''>('');
     const [floorNumber, setFloorNumber] = useState<number | ''>('');
-    const [isLevelSheetOpen, setIsLevelSheetOpen] = useState(false);
     const [editingLevel, setEditingLevel] = useState<Level | null>(null);
 
-    // State for Sorting
+    // State for Sorting and Filtering
     const [sortKey, setSortKey] = useState<SortKey>('type');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [unitSortKey, setUnitSortKey] = useState<UnitSortKey>('levelId');
     const [unitSortDirection, setUnitSortDirection] = useState<SortDirection>('asc');
+    const [unitSearchQuery, setUnitSearchQuery] = useState('');
 
     // State for common UI
     const [isBuildingSheetOpen, setIsBuildingSheetOpen] = useState(false);
+    const [isLevelSheetOpen, setIsLevelSheetOpen] = useState(false);
     const [validationError, setValidationError] = useState<{ title: string, description: string} | null>(null);
     
     // Firestore Hooks
@@ -237,9 +238,18 @@ export default function BuildingPage() {
         });
     }, [levels, sortKey, sortDirection, unitCountsByLevel]);
 
-    const sortedUnits = useMemo(() => {
+    const sortedAndFilteredUnits = useMemo(() => {
         if (!units) return [];
-        return [...units].sort((a, b) => {
+    
+        const filteredUnits = units.filter(unit => {
+            if (!unitSearchQuery) return true;
+            const query = unitSearchQuery.toLowerCase();
+            const unitNumber = String(unit.unitNumber || '').toLowerCase();
+            const ownerName = String(unit.ownerName || '').toLowerCase();
+            return unitNumber.includes(query) || ownerName.includes(query);
+        });
+
+        return [...filteredUnits].sort((a, b) => {
             const dir = unitSortDirection === 'asc' ? 1 : -1;
             
             switch (unitSortKey) {
@@ -257,7 +267,7 @@ export default function BuildingPage() {
                     return 0;
             }
         });
-    }, [units, unitSortKey, unitSortDirection, levelsMap]);
+    }, [units, unitSortKey, unitSortDirection, levelsMap, unitSearchQuery]);
 
     const handleSort = (key: SortKey) => {
         if (sortKey === key) {
@@ -513,7 +523,7 @@ export default function BuildingPage() {
     }
 
     return (
-        <main className="w-full max-w-5xl space-y-4">
+        <main className="w-full space-y-4">
             <div className="mb-2">
                 <Button variant="ghost" onClick={() => router.back()} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
                     <ArrowLeft className="h-4 w-4" /> Back
@@ -685,8 +695,21 @@ export default function BuildingPage() {
                  <TabsContent value="units">
                     <Card>
                         <CardHeader>
-                            <CardTitle>All Units</CardTitle>
-                            <CardDescription>A complete list of every unit in "{buildingName}".</CardDescription>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>All Units</CardTitle>
+                                    <CardDescription>A complete list of every unit in "{buildingName}".</CardDescription>
+                                </div>
+                                <div className="relative w-full max-w-sm">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search by unit # or owner name..."
+                                        className="pl-8"
+                                        value={unitSearchQuery}
+                                        onChange={(e) => setUnitSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent>
                              <div className="border rounded-lg">
@@ -721,7 +744,7 @@ export default function BuildingPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {sortedUnits && sortedUnits.length > 0 ? sortedUnits.map((unit) => (
+                                        {sortedAndFilteredUnits && sortedAndFilteredUnits.length > 0 ? sortedAndFilteredUnits.map((unit) => (
                                             <TableRow key={unit.id}>
                                                 <TableCell className="font-semibold">{unit.unitNumber}</TableCell>
                                                 <TableCell>{unit.type}</TableCell>
@@ -755,7 +778,9 @@ export default function BuildingPage() {
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center h-24">No units found in this building.</TableCell>
+                                                <TableCell colSpan={5} className="text-center h-24">
+                                                    {unitSearchQuery ? `No units found for "${unitSearchQuery}".` : "No units found in this building."}
+                                                </TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
@@ -790,7 +815,7 @@ export default function BuildingPage() {
             <BuildingFormSheet building={building} isOpen={isBuildingSheetOpen} onOpenChange={setIsBuildingSheetOpen} />
 
             {editingLevel && (
-                <LevelFormSheet level={editingLevel} buildingId={buildingId} isOpen={isLevelSheetOpen} onOpen-change={handleLevelSheetOpenChange} existingLevels={levels || []} />
+                <LevelFormSheet level={editingLevel} buildingId={buildingId} isOpen={isLevelSheetOpen} onOpenChange={handleLevelSheetOpenChange} existingLevels={levels || []} />
             )}
 
             <AlertDialog open={!!validationError} onOpenChange={() => setValidationError(null)}>
@@ -807,11 +832,5 @@ export default function BuildingPage() {
         </main>
     );
 }
-
-    
-
-    
-
-    
 
     
