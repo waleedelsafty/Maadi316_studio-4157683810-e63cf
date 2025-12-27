@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useUser } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp, query, updateDoc, deleteDoc, where } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, query, updateDoc, deleteDoc, where, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit, Payment } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2, DollarSign, Search } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2, DollarSign, Search, CalendarIcon } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -29,6 +29,13 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import { defaultColumnVisibility, type UnitColumnVisibility } from '@/app/settings/display/page';
 import { getQuartersForRange, formatQuarter, getCurrentQuarter } from '@/lib/calculations';
 import { format } from 'date-fns';
+import { useForm, Controller } from 'react-hook-form';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -111,6 +118,31 @@ type UnitSortKey = 'unitNumber' | 'type' | 'levelId' | 'ownerName' | 'balance';
 type SortDirection = 'asc' | 'desc';
 type QuarterRangeOption = 'current_quarter' | 'year_to_date' | 'all_since_start';
 
+const paymentTypes: Payment['paymentType'][] = ['Cash', 'Bank Transfer', 'Instapay Transfer'];
+
+const generateQuarterOptions = () => {
+    const options = [];
+    const currentYear = new Date().getFullYear();
+    for (let year = currentYear + 1; year >= currentYear - 5; year--) {
+        for (let q = 4; q >= 1; q--) {
+            options.push(`Q${q} ${year}`);
+        }
+    }
+    return options;
+};
+const quarterOptions = generateQuarterOptions();
+
+const paymentFormSchema = z.object({
+  unitId: z.string().min(1, "Please select a unit."),
+  quarter: z.string().min(1, 'Quarter is required'),
+  amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
+  paymentDate: z.date({ required_error: 'Payment date is required' }),
+  paymentType: z.enum(paymentTypes),
+  receiptUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  notes: z.string().optional(),
+});
+
+
 export default function BuildingPage() {
     const { buildingId } = useParams() as { buildingId: string };
     const router = useRouter();
@@ -132,9 +164,12 @@ export default function BuildingPage() {
     const [unitSearchQuery, setUnitSearchQuery] = useState('');
     const [columnVisibility] = useLocalStorage<UnitColumnVisibility>('unit-column-visibility', defaultColumnVisibility);
     const [quarterRange, setQuarterRange] = useState<QuarterRangeOption>('all_since_start');
+    const [paymentFilter, setPaymentFilter] = useState({ query: '', quarter: '' });
 
     // State for common UI
     const [validationError, setValidationError] = useState<{ title: string, description: string} | null>(null);
+    const [isAddingPayment, setIsAddingPayment] = useState(false);
+
     
     // Firestore Hooks
     const buildingRef = useMemo(() => {
@@ -162,11 +197,71 @@ export default function BuildingPage() {
     }, [firestore, buildingId]);
     const { data: units } = useCollection(unitsQuery);
 
+    const unitsMap = useMemo(() => {
+        if (!units) return new Map();
+        return new Map(units.map(u => [u.id, u]));
+    }, [units]);
+
     const paymentsQuery = useMemo(() => {
         if (!firestore || !buildingId) return null;
         return query(collection(firestore, 'buildings', buildingId, 'payments'));
     }, [firestore, buildingId]);
     const { data: payments } = useCollection(paymentsQuery);
+
+    const filteredPayments = useMemo(() => {
+        if (!payments) return [];
+        return payments.filter(p => {
+            const unit = unitsMap.get(p.unitId);
+            const queryLower = paymentFilter.query.toLowerCase();
+            const quarterMatch = !paymentFilter.quarter || p.quarter === paymentFilter.quarter;
+            const textMatch = !queryLower || 
+                p.notes?.toLowerCase().includes(queryLower) ||
+                unit?.unitNumber.toLowerCase().includes(queryLower) ||
+                unit?.ownerName.toLowerCase().includes(queryLower);
+            return quarterMatch && textMatch;
+        });
+    }, [payments, unitsMap, paymentFilter]);
+
+
+    const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
+        resolver: zodResolver(paymentFormSchema),
+        defaultValues: {
+            unitId: '',
+            quarter: quarterOptions[0],
+            paymentType: 'Cash',
+            notes: '',
+            receiptUrl: '',
+        }
+    });
+
+    const handleAddPayment = async (data: z.infer<typeof paymentFormSchema>) => {
+        if (!firestore || !buildingId) return;
+
+        const paymentCollectionRef = collection(firestore, 'buildings', buildingId, 'payments');
+        const newPaymentData = {
+            ...data,
+            paymentDate: Timestamp.fromDate(data.paymentDate),
+            createdAt: serverTimestamp(),
+        };
+
+        addDoc(paymentCollectionRef, newPaymentData)
+          .then(() => {
+            toast({
+              title: 'Payment Recorded',
+              description: `Payment for ${data.quarter} has been successfully recorded.`,
+            });
+            paymentForm.reset();
+            setIsAddingPayment(false);
+          })
+          .catch(() => {
+             errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: paymentCollectionRef.path,
+                operation: 'create',
+                requestResourceData: newPaymentData,
+            }));
+          });
+    };
+
 
     const financialDataByUnit = useMemo(() => {
         const results = new Map<string, { totalDue: number; totalPaid: number; balance: number }>();
@@ -349,13 +444,11 @@ export default function BuildingPage() {
 
         let updateData: { [key: string]: any } = { [field]: value };
         
-        // When renaming, ensure we use the new field
         if (field === 'Building_name') {
             updateData = { Building_name: value };
         }
 
 
-        // Auto-set counts when enabling a feature for the first time
         if (field === 'hasBasement' && value === true && !building?.basementCount) {
              updateData.basementCount = 1;
         }
@@ -374,13 +467,11 @@ export default function BuildingPage() {
     };
 
     const handleStructureChange = (field: 'hasBasement' | 'hasMezzanine' | 'hasPenthouse' | 'hasRooftop', checked: boolean) => {
-        // If user is enabling the feature, just update it.
         if (checked) {
             handleUpdateBuilding(field, true);
             return;
         }
 
-        // If user is disabling, check for existing levels of that type.
         const levelTypeMap = {
             hasBasement: 'Basement',
             hasMezzanine: 'Mezzanine',
@@ -396,7 +487,6 @@ export default function BuildingPage() {
                 description: `You must first delete all levels of type "${typeToCheck}" before you can disable this option.`,
             });
         } else {
-            // No conflict, proceed with update
             handleUpdateBuilding(field, false);
         }
     };
@@ -462,7 +552,6 @@ export default function BuildingPage() {
         }
 
 
-        // 1. Prepare data for sheets
         const buildingInfoData = [
             { Key: 'Building Name', Value: buildingName },
             { Key: 'Address', Value: building.address },
@@ -487,18 +576,15 @@ export default function BuildingPage() {
             'Quarterly Maintenance': unit.quarterlyMaintenanceFees,
         }));
         
-        // 2. Create worksheets
         const wb = XLSX.utils.book_new();
         const wsBuilding = XLSX.utils.json_to_sheet(buildingInfoData);
         const wsLevels = XLSX.utils.json_to_sheet(levelsData);
         const wsUnits = XLSX.utils.json_to_sheet(unitsData);
 
-        // 3. Append worksheets to workbook
         XLSX.utils.book_append_sheet(wb, wsBuilding, "Building Info");
         XLSX.utils.book_append_sheet(wb, wsLevels, "Levels");
         XLSX.utils.book_append_sheet(wb, wsUnits, "Units");
 
-        // 4. Write workbook and trigger download
         const fileName = `${buildingName.replace(/\s+/g, '_')}_Export.xlsx`;
         XLSX.writeFile(wb, fileName);
 
@@ -676,6 +762,7 @@ export default function BuildingPage() {
                     <TabsList>
                         <TabsTrigger value="levels">Levels</TabsTrigger>
                         <TabsTrigger value="units">All Units</TabsTrigger>
+                        <TabsTrigger value="payments">Payments</TabsTrigger>
                     </TabsList>
                     <div className="pb-2">
                         {!isAddingLevel && <Button onClick={() => setIsAddingLevel(true)}>Add New Level</Button>}
@@ -878,6 +965,179 @@ export default function BuildingPage() {
                                         )}
                                     </TableBody>
                                 </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                 <TabsContent value="payments">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>Payments</CardTitle>
+                                    <CardDescription>Record and view all payments for this building.</CardDescription>
+                                </div>
+                                {!isAddingPayment && <Button onClick={() => setIsAddingPayment(true)}>Record New Payment</Button>}
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                             {isAddingPayment && (
+                                <form onSubmit={paymentForm.handleSubmit(handleAddPayment)} className="space-y-6 p-4 border rounded-lg bg-muted/50">
+                                    <h3 className="font-medium">Record a New Payment</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div>
+                                            <Label>Unit</Label>
+                                            <Controller
+                                                name="unitId"
+                                                control={paymentForm.control}
+                                                render={({ field }) => (
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <SelectTrigger><SelectValue placeholder="Select a unit" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {sortedAndFilteredUnits.map(u => <SelectItem key={u.id} value={u.id}>Unit {u.unitNumber} ({u.ownerName})</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                            />
+                                            {paymentForm.formState.errors.unitId && <p className="text-red-500 text-xs mt-1">{paymentForm.formState.errors.unitId.message}</p>}
+                                        </div>
+                                         <div>
+                                            <Label>Quarter</Label>
+                                            <Controller
+                                                name="quarter"
+                                                control={paymentForm.control}
+                                                render={({ field }) => (
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {quarterOptions.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                            />
+                                            {paymentForm.formState.errors.quarter && <p className="text-red-500 text-xs mt-1">{paymentForm.formState.errors.quarter.message}</p>}
+                                        </div>
+                                        <div>
+                                            <Label>Amount Paid</Label>
+                                            <Input type="number" step="0.01" {...paymentForm.register('amount')} />
+                                            {paymentForm.formState.errors.amount && <p className="text-red-500 text-xs mt-1">{paymentForm.formState.errors.amount.message}</p>}
+                                        </div>
+                                         <div>
+                                            <Label>Payment Date</Label>
+                                             <Controller
+                                                name="paymentDate"
+                                                control={paymentForm.control}
+                                                render={({ field }) => (
+                                                   <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0">
+                                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                )}
+                                            />
+                                            {paymentForm.formState.errors.paymentDate && <p className="text-red-500 text-xs mt-1">{paymentForm.formState.errors.paymentDate.message}</p>}
+                                        </div>
+                                         <div>
+                                            <Label>Payment Type</Label>
+                                             <Controller
+                                                name="paymentType"
+                                                control={paymentForm.control}
+                                                render={({ field }) => (
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {paymentTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                            />
+                                            {paymentForm.formState.errors.paymentType && <p className="text-red-500 text-xs mt-1">{paymentForm.formState.errors.paymentType.message}</p>}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label>Notes</Label>
+                                        <Textarea placeholder="e.g., Paid in two installments." {...paymentForm.register('notes')} />
+                                    </div>
+
+                                     <div className="flex justify-end gap-2">
+                                        <Button type="button" variant="outline" onClick={() => setIsAddingPayment(false)}>Cancel</Button>
+                                        <Button type="submit" disabled={paymentForm.formState.isSubmitting}>
+                                            {paymentForm.formState.isSubmitting ? 'Recording...' : 'Record Payment'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            )}
+
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="font-medium">Payment History</h3>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Filter by unit #, owner, notes..."
+                                            className="w-64"
+                                            value={paymentFilter.query}
+                                            onChange={(e) => setPaymentFilter(prev => ({ ...prev, query: e.target.value }))}
+                                        />
+                                        <Select
+                                            value={paymentFilter.quarter}
+                                            onValueChange={(value) => setPaymentFilter(prev => ({ ...prev, quarter: value === 'all' ? '' : value }))}
+                                        >
+                                            <SelectTrigger className="w-48">
+                                                <SelectValue placeholder="Filter by quarter..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Quarters</SelectItem>
+                                                {quarterOptions.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="border rounded-lg">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Unit</TableHead>
+                                                <TableHead>Owner</TableHead>
+                                                <TableHead>Quarter</TableHead>
+                                                <TableHead>Date Paid</TableHead>
+                                                <TableHead>Amount</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Notes</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredPayments.length > 0 ? filteredPayments
+                                                .sort((a,b) => b.paymentDate.toMillis() - a.paymentDate.toMillis())
+                                                .map((payment) => {
+                                                    const unit = unitsMap.get(payment.unitId);
+                                                    return (
+                                                        <TableRow key={payment.id}>
+                                                            <TableCell className="font-semibold">{unit?.unitNumber || 'N/A'}</TableCell>
+                                                            <TableCell>{unit?.ownerName || 'N/A'}</TableCell>
+                                                            <TableCell>{payment.quarter}</TableCell>
+                                                            <TableCell>{format(payment.paymentDate.toDate(), 'PPP')}</TableCell>
+                                                            <TableCell>{payment.amount.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}</TableCell>
+                                                            <TableCell>{payment.paymentType}</TableCell>
+                                                            <TableCell className="max-w-xs truncate">{payment.notes || '—'}</TableCell>
+                                                        </TableRow>
+                                                    )
+                                                }) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={7} className="h-24 text-center">
+                                                            {paymentFilter.query || paymentFilter.quarter ? "No payments match your filter." : "No payments recorded yet."}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            }
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
