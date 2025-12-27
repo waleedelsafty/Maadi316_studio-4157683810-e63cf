@@ -14,6 +14,14 @@ This is a Next.js application built with Firebase Studio for managing building i
 
 ## Version History
 
+### v0.1.7
+- **Centralized Payments Tab**: Added a dedicated "Payments" tab on the building detail page, creating a single place to record and view all financial transactions for a building.
+- **Smart Payment Form**: The "Record Payment" form now features a searchable combobox to find units by number or owner name. When a unit is selected, its details are displayed and the "Amount Paid" field is auto-filled with the quarterly fee.
+- **Dynamic Quarter Selection**: The quarter selection dropdowns are now dynamically populated, showing only relevant quarters from the building's financial start date to two quarters in the future, improving usability.
+- **Financials Overhaul**: Completely refactored financial calculations on the "All Units" tab. It now features a quarter-range selector (Current Quarter, YTD, All) and correctly calculates "Total Due," "Total Paid," and "Balance" for the selected period.
+- **Date Picker Fixes**: Resolved numerous layout and functionality bugs in the date picker component, ensuring correct rendering and behavior.
+- **General Bug Fixes**: Corrected an issue where the "Edit Building" page would appear blank and fixed a crash in the unit search combobox.
+
 ### v0.1.6
 - **Data Export**: Added functionality to export all building data (details, levels, units) to either JSON or multi-sheet Excel formats via a dropdown menu on the building detail page.
 - **Homepage Dashboard Redesign**: The homepage now acts as a true dashboard, displaying a list of building summary cards instead of a simple dropdown, providing an at-a-glance portfolio view.
