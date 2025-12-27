@@ -105,6 +105,7 @@ function SoftDeleteDialog({ onConfirm, buildingName }: { onConfirm: () => void, 
 
 
 type SortKey = 'name' | 'type' | 'units';
+type UnitSortKey = 'unitNumber' | 'type' | 'levelId' | 'ownerName';
 type SortDirection = 'asc' | 'desc';
 
 export default function BuildingPage() {
@@ -125,6 +126,8 @@ export default function BuildingPage() {
     // State for Sorting
     const [sortKey, setSortKey] = useState<SortKey>('type');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+    const [unitSortKey, setUnitSortKey] = useState<UnitSortKey>('levelId');
+    const [unitSortDirection, setUnitSortDirection] = useState<SortDirection>('asc');
 
     // State for common UI
     const [isBuildingSheetOpen, setIsBuildingSheetOpen] = useState(false);
@@ -234,6 +237,28 @@ export default function BuildingPage() {
         });
     }, [levels, sortKey, sortDirection, unitCountsByLevel]);
 
+    const sortedUnits = useMemo(() => {
+        if (!units) return [];
+        return [...units].sort((a, b) => {
+            const dir = unitSortDirection === 'asc' ? 1 : -1;
+            
+            switch (unitSortKey) {
+                case 'unitNumber':
+                    return (a.unitNumber || '').localeCompare(b.unitNumber || '', undefined, { numeric: true }) * dir;
+                case 'type':
+                    return (a.type || '').localeCompare(b.type || '') * dir;
+                case 'ownerName':
+                    return (a.ownerName || '').localeCompare(b.ownerName || '') * dir;
+                case 'levelId':
+                    const levelNameA = levelsMap.get(a.levelId) || '';
+                    const levelNameB = levelsMap.get(b.levelId) || '';
+                    return levelNameA.localeCompare(levelNameB) * dir;
+                default:
+                    return 0;
+            }
+        });
+    }, [units, unitSortKey, unitSortDirection, levelsMap]);
+
     const handleSort = (key: SortKey) => {
         if (sortKey === key) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -243,11 +268,23 @@ export default function BuildingPage() {
         }
     };
 
-    const renderSortIcon = (key: SortKey) => {
-        if (sortKey !== key) {
+    const handleUnitSort = (key: UnitSortKey) => {
+        if (unitSortKey === key) {
+            setUnitSortDirection(unitSortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setUnitSortKey(key);
+            setUnitSortDirection('asc');
+        }
+    };
+
+    const renderSortIcon = (key: SortKey | UnitSortKey, forUnits: boolean = false) => {
+        const currentKey = forUnits ? unitSortKey : sortKey;
+        const currentDirection = forUnits ? unitSortDirection : sortDirection;
+
+        if (currentKey !== key) {
             return <ChevronsUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
         }
-        return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
+        return currentDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
     };
 
     const handleUpdateBuilding = async (field: keyof Building, value: string | boolean | number) => {
@@ -656,15 +693,35 @@ export default function BuildingPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Unit #</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Level</TableHead>
-                                            <TableHead>Owner</TableHead>
+                                            <TableHead>
+                                                <Button variant="ghost" onClick={() => handleUnitSort('unitNumber')} className="px-0">
+                                                    Unit #
+                                                    {renderSortIcon('unitNumber', true)}
+                                                </Button>
+                                            </TableHead>
+                                            <TableHead>
+                                                 <Button variant="ghost" onClick={() => handleUnitSort('type')} className="px-0">
+                                                    Type
+                                                    {renderSortIcon('type', true)}
+                                                </Button>
+                                            </TableHead>
+                                            <TableHead>
+                                                 <Button variant="ghost" onClick={() => handleUnitSort('levelId')} className="px-0">
+                                                    Level
+                                                    {renderSortIcon('levelId', true)}
+                                                </Button>
+                                            </TableHead>
+                                            <TableHead>
+                                                 <Button variant="ghost" onClick={() => handleUnitSort('ownerName')} className="px-0">
+                                                    Owner
+                                                    {renderSortIcon('ownerName', true)}
+                                                </Button>
+                                            </TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {units && units.length > 0 ? units.map((unit) => (
+                                        {sortedUnits && sortedUnits.length > 0 ? sortedUnits.map((unit) => (
                                             <TableRow key={unit.id}>
                                                 <TableCell className="font-semibold">{unit.unitNumber}</TableCell>
                                                 <TableCell>{unit.type}</TableCell>
@@ -750,6 +807,8 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    
 
     
 
