@@ -273,7 +273,7 @@ export default function BuildingPage() {
             </div>
 
             <Card>
-                <CardHeader>
+                <CardHeader className="p-4">
                     <div className="flex justify-between items-start">
                         <div>
                             <CardTitle>Building Information</CardTitle>
@@ -301,7 +301,7 @@ export default function BuildingPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="p-4 space-y-2">
                      {building ? (
                         <>
                            <div className="space-y-2">
@@ -370,7 +370,7 @@ export default function BuildingPage() {
             </Card>
 
             <Tabs defaultValue="levels" className="w-full">
-                <TabsList>
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="levels">Levels</TabsTrigger>
                     <TabsTrigger value="units">All Units</TabsTrigger>
                     <TabsTrigger value="payments">Payments</TabsTrigger>
@@ -390,13 +390,13 @@ export default function BuildingPage() {
             </Tabs>
 
             <Card className="border-destructive">
-                <CardHeader>
+                <CardHeader className="p-4">
                     <CardTitle>Danger Zone</CardTitle>
                     <CardDescription>
                         This action is irreversible. Once deleted, the building will be moved to the recycle bin.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive" disabled={!building}>
