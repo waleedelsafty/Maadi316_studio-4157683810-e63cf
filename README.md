@@ -14,6 +14,11 @@ This is a Next.js application built with Firebase Studio for managing building i
 
 ## Version History
 
+### v0.1.9
+- **UI & UX Polish**: Improved the permanent delete confirmation dialog by simplifying the required text to "yes delete" for better usability.
+- **Safer Dashboard**: Removed the "Danger Zone" section from the building dashboard to reduce the risk of accidental building deletion.
+- **Sidebar UI Fix**: Corrected a layout bug in the main sidebar where user information would overlap with action icons when the sidebar was collapsed, ensuring a clean and professional appearance.
+
 ### v0.1.8
 - **Major Architectural Refactoring**: The monolithic building detail page has been broken down into a more stable and maintainable multi-page structure to resolve critical performance issues in the development environment.
 - **New Building Dashboard**: The main page for a building (`/building/[buildingId]`) now serves as a clean dashboard, providing summary information and links to dedicated management sections.
