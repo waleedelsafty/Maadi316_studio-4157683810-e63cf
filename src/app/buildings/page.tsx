@@ -97,18 +97,18 @@ function BuildingRow({ building }: { building: Building }) {
         )
     }
 
-    if (!building.id || !levels) {
+    if (!levels) {
          return (
             <TableRow>
                 <TableCell className="font-medium">
-                    <Skeleton className="h-5 w-32" />
+                     <p>{buildingName}</p>
                 </TableCell>
-                <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
-                <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
+                <TableCell><p>{building.address}</p></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
+                <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
                 <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
+                <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
                 <TableCell className="text-right"><Skeleton className="h-9 w-24 ml-auto" /></TableCell>
             </TableRow>
         )
@@ -155,6 +155,21 @@ function BuildingRow({ building }: { building: Building }) {
     );
 }
 
+function LoadingRow() {
+    return (
+        <TableRow>
+            <TableCell className="font-medium"><Skeleton className="h-5 w-32" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+            <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
+            <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
+            <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
+            <TableCell className="text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
+            <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
+            <TableCell className="text-right"><Skeleton className="h-9 w-24 ml-auto" /></TableCell>
+        </TableRow>
+    );
+}
+
 
 export default function BuildingsPage() {
   const user = useUser();
@@ -194,52 +209,43 @@ export default function BuildingsPage() {
       </div>
       
       <div className="border rounded-lg">
-        {buildings === null && (
-             <Table>
-                <TableHeader>
+        <Table>
+          <TableHeader>
+              <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead className="text-center">Basement(s)</TableHead>
+                  <TableHead className="text-center">Mezzanine(s)</TableHead>
+                  <TableHead className="text-center">Ground</TableHead>
+                  <TableHead className="text-center">Typical Floors</TableHead>
+                  <TableHead className="text-center">Penthouse</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+          </TableHeader>
+          <TableBody>
+              {buildings === null && (
+                  <>
+                      <LoadingRow />
+                      <LoadingRow />
+                      <LoadingRow />
+                  </>
+              )}
+              {buildings && buildings.length > 0 && (
+                  buildings.map((building) => (
+                      <BuildingRow key={building.id} building={building} />
+                  ))
+              )}
+               {buildings && buildings.length === 0 && (
                     <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Address</TableHead>
-                        <TableHead className="text-center">Basement(s)</TableHead>
-                        <TableHead className="text-center">Mezzanine(s)</TableHead>
-                        <TableHead className="text-center">Ground</TableHead>
-                        <TableHead className="text-center">Typical Floors</TableHead>
-                        <TableHead className="text-center">Penthouse</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableCell colSpan={8} className="text-center py-12 px-4">
+                             <p className="text-muted-foreground">
+                                You haven't added any buildings yet. Click "Add Building" or "Import Building" to start.
+                            </p>
+                        </TableCell>
                     </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {[...Array(3)].map((_, i) => <BuildingRow key={i} building={{} as Building} />)}
-                </TableBody>
-             </Table>
-        )}
-        {buildings && buildings.length > 0 ? (
-          <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead className="text-center">Basement(s)</TableHead>
-                    <TableHead className="text-center">Mezzanine(s)</TableHead>
-                    <TableHead className="text-center">Ground</TableHead>
-                    <TableHead className="text-center">Typical Floors</TableHead>
-                    <TableHead className="text-center">Penthouse</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {buildings.map((building) => (
-                    <BuildingRow key={building.id} building={building} />
-                ))}
-            </TableBody>
-          </Table>
-        ) : buildings && buildings.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <p className="text-muted-foreground">
-              You haven't added any buildings yet. Click "Add Building" or "Import Building" to start.
-            </p>
-          </div>
-        ) : null}
+               )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
