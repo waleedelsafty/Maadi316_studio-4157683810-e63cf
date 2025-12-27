@@ -27,6 +27,8 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import useLocalStorage from '@/hooks/use-local-storage';
+import { defaultColumnVisibility, type UnitColumnVisibility } from '../settings/display/page';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -128,6 +130,8 @@ export default function BuildingPage() {
     const [unitSortKey, setUnitSortKey] = useState<UnitSortKey>('levelId');
     const [unitSortDirection, setUnitSortDirection] = useState<SortDirection>('asc');
     const [unitSearchQuery, setUnitSearchQuery] = useState('');
+    const [columnVisibility] = useLocalStorage<UnitColumnVisibility>('unit-column-visibility', defaultColumnVisibility);
+
 
     // State for common UI
     const [isBuildingSheetOpen, setIsBuildingSheetOpen] = useState(false);
@@ -722,24 +726,30 @@ export default function BuildingPage() {
                                                     {renderSortIcon('unitNumber', true)}
                                                 </Button>
                                             </TableHead>
-                                            <TableHead>
-                                                 <Button variant="ghost" onClick={() => handleUnitSort('type')} className="px-0">
-                                                    Type
-                                                    {renderSortIcon('type', true)}
-                                                </Button>
-                                            </TableHead>
-                                            <TableHead>
-                                                 <Button variant="ghost" onClick={() => handleUnitSort('levelId')} className="px-0">
-                                                    Level
-                                                    {renderSortIcon('levelId', true)}
-                                                </Button>
-                                            </TableHead>
-                                            <TableHead>
-                                                 <Button variant="ghost" onClick={() => handleUnitSort('ownerName')} className="px-0">
-                                                    Owner
-                                                    {renderSortIcon('ownerName', true)}
-                                                </Button>
-                                            </TableHead>
+                                            {columnVisibility.type && (
+                                                <TableHead>
+                                                    <Button variant="ghost" onClick={() => handleUnitSort('type')} className="px-0">
+                                                        Type
+                                                        {renderSortIcon('type', true)}
+                                                    </Button>
+                                                </TableHead>
+                                            )}
+                                            {columnVisibility.level && (
+                                                <TableHead>
+                                                    <Button variant="ghost" onClick={() => handleUnitSort('levelId')} className="px-0">
+                                                        Level
+                                                        {renderSortIcon('levelId', true)}
+                                                    </Button>
+                                                </TableHead>
+                                            )}
+                                            {columnVisibility.owner && (
+                                                <TableHead>
+                                                    <Button variant="ghost" onClick={() => handleUnitSort('ownerName')} className="px-0">
+                                                        Owner
+                                                        {renderSortIcon('ownerName', true)}
+                                                    </Button>
+                                                </TableHead>
+                                            )}
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -747,9 +757,9 @@ export default function BuildingPage() {
                                         {sortedAndFilteredUnits && sortedAndFilteredUnits.length > 0 ? sortedAndFilteredUnits.map((unit) => (
                                             <TableRow key={unit.id}>
                                                 <TableCell className="font-semibold">{unit.unitNumber}</TableCell>
-                                                <TableCell>{unit.type}</TableCell>
-                                                <TableCell>{levelsMap.get(unit.levelId) || 'N/A'}</TableCell>
-                                                <TableCell>{unit.ownerName}</TableCell>
+                                                {columnVisibility.type && <TableCell>{unit.type}</TableCell>}
+                                                {columnVisibility.level && <TableCell>{levelsMap.get(unit.levelId) || 'N/A'}</TableCell>}
+                                                {columnVisibility.owner && <TableCell>{unit.ownerName}</TableCell>}
                                                 <TableCell className="text-right">
                                                     <div className="flex gap-2 justify-end">
                                                         <Button variant="outline" size="sm" asChild>
@@ -832,5 +842,3 @@ export default function BuildingPage() {
         </main>
     );
 }
-
-    

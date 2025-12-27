@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const tabs = [
     { name: 'General', href: '/settings/general' },
     { name: 'Theme', href: '/settings/theme' },
+    { name: 'Display', href: '/settings/display' },
     { name: 'Recycle Bin', href: '/settings/recycle-bin' },
 ]
 
