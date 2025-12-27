@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -12,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import type { Building, Level, Unit } from '@/types';
+import type { Building, Level, Unit, Payment } from '@/types';
 import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2, DollarSign, Search } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
@@ -29,6 +28,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { defaultColumnVisibility, type UnitColumnVisibility } from '@/app/settings/display/page';
+import { getQuartersSince } from '@/lib/calculations';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -107,7 +107,7 @@ function SoftDeleteDialog({ onConfirm, buildingName }: { onConfirm: () => void, 
 
 
 type SortKey = 'name' | 'type' | 'units';
-type UnitSortKey = 'unitNumber' | 'type' | 'levelId' | 'ownerName';
+type UnitSortKey = 'unitNumber' | 'type' | 'levelId' | 'ownerName' | 'balanceDue';
 type SortDirection = 'asc' | 'desc';
 
 export default function BuildingPage() {
@@ -127,8 +127,8 @@ export default function BuildingPage() {
     // State for Sorting and Filtering
     const [sortKey, setSortKey] = useState<SortKey>('type');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-    const [unitSortKey, setUnitSortKey] = useState<UnitSortKey>('levelId');
-    const [unitSortDirection, setUnitSortDirection] = useState<SortDirection>('asc');
+    const [unitSortKey, setUnitSortKey] = useState<UnitSortKey>('balanceDue');
+    const [unitSortDirection, setUnitSortDirection] = useState<SortDirection>('desc');
     const [unitSearchQuery, setUnitSearchQuery] = useState('');
     const [columnVisibility] = useLocalStorage<UnitColumnVisibility>('unit-column-visibility', defaultColumnVisibility);
 
@@ -163,6 +163,35 @@ export default function BuildingPage() {
         return query(collection(firestore, 'buildings', buildingId, 'units'));
     }, [firestore, buildingId]);
     const { data: units } = useCollection(unitsQuery);
+
+    const paymentsQuery = useMemo(() => {
+        if (!firestore || !buildingId) return null;
+        return query(collection(firestore, 'buildings', buildingId, 'payments'));
+    }, [firestore, buildingId]);
+    const { data: payments } = useCollection(paymentsQuery);
+
+    const paymentsByUnit = useMemo(() => {
+        if (!payments) return new Map<string, number>();
+        const unitPayments = new Map<string, number>();
+        for (const payment of payments) {
+            const total = unitPayments.get(payment.unitId) || 0;
+            unitPayments.set(payment.unitId, total + payment.amount);
+        }
+        return unitPayments;
+    }, [payments]);
+
+    const balancesByUnit = useMemo(() => {
+        if (!units) return new Map<string, number>();
+        const balances = new Map<string, number>();
+        units.forEach(unit => {
+            const quartersSinceCreation = getQuartersSince(unit.createdAt?.toDate());
+            const totalDue = quartersSinceCreation * (unit.quarterlyMaintenanceFees || 0);
+            const totalPaid = paymentsByUnit.get(unit.id) || 0;
+            balances.set(unit.id, totalDue - totalPaid);
+        });
+        return balances;
+    }, [units, paymentsByUnit]);
+
 
     const unitCountsByLevel = useMemo(() => {
         if (!units) return new Map<string, number>();
@@ -267,15 +296,19 @@ export default function BuildingPage() {
                     const levelNameA = levelsMap.get(a.levelId) || '';
                     const levelNameB = levelsMap.get(b.levelId) || '';
                     return levelNameA.localeCompare(levelNameB) * dir;
+                case 'balanceDue':
+                    const balanceA = balancesByUnit.get(a.id) || 0;
+                    const balanceB = balancesByUnit.get(b.id) || 0;
+                    return (balanceA - balanceB) * dir;
                 default:
                     return 0;
             }
         });
-    }, [units, unitSortKey, unitSortDirection, levelsMap, unitSearchQuery]);
+    }, [units, unitSortKey, unitSortDirection, levelsMap, unitSearchQuery, balancesByUnit]);
 
     const unitTableColSpan = useMemo(() => {
         return (
-            2 + // Unit # and Actions are always visible
+            3 + // Unit #, Balance, and Actions are always visible
             (columnVisibility.type ? 1 : 0) +
             (columnVisibility.level ? 1 : 0) +
             (columnVisibility.owner ? 1 : 0)
@@ -759,43 +792,55 @@ export default function BuildingPage() {
                                                     </Button>
                                                 </TableHead>
                                             )}
+                                            <TableHead>
+                                                 <Button variant="ghost" onClick={() => handleUnitSort('balanceDue')} className="px-0">
+                                                    Balance Due
+                                                    {renderSortIcon('balanceDue', true)}
+                                                </Button>
+                                            </TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {sortedAndFilteredUnits && sortedAndFilteredUnits.length > 0 ? sortedAndFilteredUnits.map((unit) => (
-                                            <TableRow key={unit.id}>
-                                                <TableCell className="font-semibold">{unit.unitNumber}</TableCell>
-                                                {columnVisibility.type && <TableCell>{unit.type}</TableCell>}
-                                                {columnVisibility.level && <TableCell>{levelsMap.get(unit.levelId) || 'N/A'}</TableCell>}
-                                                {columnVisibility.owner && <TableCell>{unit.ownerName}</TableCell>}
-                                                <TableCell className="text-right">
-                                                    <div className="flex gap-2 justify-end">
-                                                        <Button variant="outline" size="sm" asChild>
-                                                            <Link href={`/building/${buildingId}/unit/${unit.id}/payments`}>
-                                                                <DollarSign className="mr-2 h-4 w-4" /> Payments
-                                                            </Link>
-                                                        </Button>
-                                                         <Button variant="outline" size="sm" asChild>
-                                                            <Link href={`/building/${buildingId}/unit/${unit.id}/edit`}>Edit</Link>
-                                                        </Button>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild><Button variant="destructive" size="sm">Delete</Button></AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>This will permanently delete unit "{unit.unitNumber}".</AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDelete('units', unit.id)}>Continue</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )) : (
+                                        {sortedAndFilteredUnits && sortedAndFilteredUnits.length > 0 ? sortedAndFilteredUnits.map((unit) => {
+                                            const balance = balancesByUnit.get(unit.id) || 0;
+                                            return (
+                                                <TableRow key={unit.id}>
+                                                    <TableCell className="font-semibold">{unit.unitNumber}</TableCell>
+                                                    {columnVisibility.type && <TableCell>{unit.type}</TableCell>}
+                                                    {columnVisibility.level && <TableCell>{levelsMap.get(unit.levelId) || 'N/A'}</TableCell>}
+                                                    {columnVisibility.owner && <TableCell>{unit.ownerName}</TableCell>}
+                                                    <TableCell className={balance > 0 ? 'text-destructive' : ''}>
+                                                        {balance.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex gap-2 justify-end">
+                                                            <Button variant="outline" size="sm" asChild>
+                                                                <Link href={`/building/${buildingId}/unit/${unit.id}/payments`}>
+                                                                    <DollarSign className="mr-2 h-4 w-4" /> Payments
+                                                                </Link>
+                                                            </Button>
+                                                            <Button variant="outline" size="sm" asChild>
+                                                                <Link href={`/building/${buildingId}/unit/${unit.id}/edit`}>Edit</Link>
+                                                            </Button>
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild><Button variant="destructive" size="sm">Delete</Button></AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>This will permanently delete unit "{unit.unitNumber}".</AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDelete('units', unit.id)}>Continue</AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        }) : (
                                             <TableRow>
                                                 <TableCell colSpan={unitTableColSpan} className="text-center h-24">
                                                     {unitSearchQuery ? `No units found for "${unitSearchQuery}".` : "No units found in this building."}
