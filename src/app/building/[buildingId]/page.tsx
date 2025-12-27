@@ -28,7 +28,7 @@ import { saveAs } from 'file-saver';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { defaultColumnVisibility, type UnitColumnVisibility } from '../settings/display/page';
+import { defaultColumnVisibility, type UnitColumnVisibility } from '@/app/settings/display/page';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
