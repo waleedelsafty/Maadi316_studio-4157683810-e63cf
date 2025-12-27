@@ -178,17 +178,22 @@ export default function BuildingPage() {
     }, [payments]);
 
     const balancesByUnit = useMemo(() => {
-        if (!units || !building) return new Map<string, number>();
+        if (!units || !building || !building.financialStartDate) return new Map<string, number>();
         const balances = new Map<string, number>();
-        units.forEach(unit => {
-            const financialStartDate = building.financialStartDate?.toDate();
-            // A unit balance calculation should not start before the building's financial start date.
-            const calculationStartDate = (financialStartDate && unit.createdAt?.toDate() < financialStartDate) 
-                ? financialStartDate 
-                : unit.createdAt?.toDate();
+        
+        const financialStartDate = building.financialStartDate?.toDate();
+        const quartersSinceFinancialStart = getQuartersSince(financialStartDate);
 
-            const quartersSinceCreation = getQuartersSince(calculationStartDate);
-            const totalDue = quartersSinceCreation * (unit.quarterlyMaintenanceFees || 0);
+        units.forEach(unit => {
+            const unitCreationDate = unit.createdAt?.toDate();
+            // A unit balance calculation should not start before the building's financial start date OR the unit's creation date.
+            const calculationStartDate = (unitCreationDate && financialStartDate && unitCreationDate > financialStartDate) 
+                ? unitCreationDate 
+                : financialStartDate;
+
+            const quartersDue = getQuartersSince(calculationStartDate);
+            
+            const totalDue = quartersDue * (unit.quarterlyMaintenanceFees || 0);
             const totalPaid = paymentsByUnit.get(unit.id) || 0;
             balances.set(unit.id, totalPaid - totalDue);
         });

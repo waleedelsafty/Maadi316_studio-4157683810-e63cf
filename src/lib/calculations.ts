@@ -2,9 +2,10 @@
 // src/lib/calculations.ts
 
 /**
- * Calculates the number of full quarters that have passed between a start date and today.
+ * Calculates the number of quarters that have started between a given date and today.
+ * If the start date is in the middle of a quarter, that quarter is counted.
  * @param calculationStartDate The starting date for the calculation.
- * @returns The number of quarters passed.
+ * @returns The number of quarters that have started.
  */
 export function getQuartersSince(calculationStartDate: Date | null | undefined): number {
     if (!calculationStartDate) {
@@ -12,36 +13,52 @@ export function getQuartersSince(calculationStartDate: Date | null | undefined):
     }
 
     const now = new Date();
-    const start = new Date(calculationStartDate);
+    let start = new Date(calculationStartDate);
 
-    // Ensure start date is not in the future
+    // If start date is in the future, no quarters have passed.
     if (start > now) {
         return 0;
     }
-    
-    // Set start day to 1 to count the start quarter if it's not in the future
-    start.setDate(1);
 
-    const startYear = start.getFullYear();
-    const startQuarter = Math.floor(start.getMonth() / 3) + 1;
+    let quarters = 0;
+    let current = new Date(start.getFullYear(), start.getMonth(), 1);
 
-    const nowYear = now.getFullYear();
-    const nowQuarter = Math.floor(now.getMonth() / 3) + 1;
-    
-    // Quarters passed in the same year
-    if (startYear === nowYear) {
-        return Math.max(0, nowQuarter - startQuarter + 1);
+    while (current <= now) {
+        const month = current.getMonth();
+        // A new quarter starts in January (0), April (3), July (6), October (9)
+        if (month === 0 || month === 3 || month === 6 || month === 9) {
+             // Only count if this quarter start is on or after the original start date.
+             // This correctly handles a financialStartDate that is after the start of its own quarter.
+             if (current >= new Date(start.getFullYear(), start.getMonth(), 1)) {
+                quarters++;
+             }
+        }
+        // Move to the next month
+        current.setMonth(current.getMonth() + 1);
     }
     
-    // Quarters remaining in the start year
-    const quartersInStartYear = 4 - startQuarter + 1;
+    // The loop above only counts when a *new* quarter starts.
+    // We need to also count the very first quarter if it wasn't counted.
+    // Let's use a simpler, more robust logic.
 
-    // Quarters passed in the current year
-    const quartersInCurrentYear = nowQuarter;
+    const end = new Date();
+
+    // If start date is in the future, no quarters have passed.
+    if (start > end) {
+        return 0;
+    }
+
+    const startYear = start.getFullYear();
+    const startQuarter = Math.floor(start.getMonth() / 3); // 0-indexed (0, 1, 2, 3)
+
+    const endYear = end.getFullYear();
+    const endQuarter = Math.floor(end.getMonth() / 3); // 0-indexed (0, 1, 2, 3)
+
+    const yearDiff = endYear - startYear;
     
-    // Quarters for the full years in between
-    const fullYearsBetween = nowYear - startYear - 1;
-    const quartersInFullYears = fullYearsBetween > 0 ? fullYearsBetween * 4 : 0;
-    
-    return quartersInStartYear + quartersInFullYears + quartersInCurrentYear;
+    // Total quarters based on year difference, plus the difference in quarters within the year.
+    // We add 1 because the calculation is inclusive of the start and end quarters.
+    const totalQuarters = (yearDiff * 4) + (endQuarter - startQuarter) + 1;
+
+    return totalQuarters;
 }
