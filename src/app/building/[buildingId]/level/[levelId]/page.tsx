@@ -103,7 +103,7 @@ export default function LevelPage() {
     return (
         <main className="w-full max-w-5xl space-y-4">
             <div className="mb-2">
-                <Button variant="ghost" onClick={() => router.back()} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
+                <Button variant="ghost" onClick={() => router.push(`/building/${buildingId}`)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
                     <ArrowLeft className="h-4 w-4" /> Back to Building
                 </Button>
             </div>
@@ -230,9 +230,3 @@ export default function LevelPage() {
         </main>
     );
 }
-
-    
-
-    
-
-    

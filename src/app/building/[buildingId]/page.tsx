@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useUser } from '@/firebase';
 import { doc, collection, addDoc, serverTimestamp, query, updateDoc, deleteDoc, where, Timestamp } from 'firebase/firestore';
@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit, Payment } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2, DollarSign, Search, CalendarIcon } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2, DollarSign, Search, CalendarIcon, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -170,6 +170,11 @@ export default function BuildingPage() {
     const [validationError, setValidationError] = useState<{ title: string, description: string} | null>(null);
     const [isAddingPayment, setIsAddingPayment] = useState(false);
 
+    // State for payment combobox
+    const [isComboboxOpen, setIsComboboxOpen] = useState(false);
+    const [comboboxSearch, setComboboxSearch] = useState("");
+    const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+
     
     // Firestore Hooks
     const buildingRef = useMemo(() => {
@@ -234,6 +239,27 @@ export default function BuildingPage() {
         }
     });
 
+    const comboboxFilteredUnits = useMemo(() => {
+        if (!units) return [];
+        if (!comboboxSearch) return units;
+        const lowerQuery = comboboxSearch.toLowerCase();
+        return units.filter(u => 
+            u.unitNumber.toLowerCase().includes(lowerQuery) || 
+            u.ownerName.toLowerCase().includes(lowerQuery)
+        );
+    }, [units, comboboxSearch]);
+
+    useEffect(() => {
+        if (selectedUnit) {
+            paymentForm.setValue('unitId', selectedUnit.id);
+            paymentForm.setValue('amount', selectedUnit.quarterlyMaintenanceFees);
+        } else {
+             paymentForm.resetField('unitId');
+             paymentForm.resetField('amount');
+        }
+    }, [selectedUnit, paymentForm]);
+
+
     const handleAddPayment = async (data: z.infer<typeof paymentFormSchema>) => {
         if (!firestore || !buildingId) return;
 
@@ -252,6 +278,8 @@ export default function BuildingPage() {
             });
             paymentForm.reset();
             setIsAddingPayment(false);
+            setSelectedUnit(null);
+            setComboboxSearch("");
           })
           .catch(() => {
              errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -984,24 +1012,52 @@ export default function BuildingPage() {
                              {isAddingPayment && (
                                 <form onSubmit={paymentForm.handleSubmit(handleAddPayment)} className="space-y-6 p-4 border rounded-lg bg-muted/50">
                                     <h3 className="font-medium">Record a New Payment</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    
+                                    <div>
+                                        <Label>Unit</Label>
+                                        <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" role="combobox" aria-expanded={isComboboxOpen} className="w-full justify-between">
+                                                    {selectedUnit ? `Unit ${selectedUnit.unitNumber} (${selectedUnit.ownerName})` : "Select unit..."}
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                <div className="p-2">
+                                                     <Input
+                                                        placeholder="Search by unit or owner..."
+                                                        value={comboboxSearch}
+                                                        onChange={(e) => setComboboxSearch(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="max-h-[300px] overflow-y-auto">
+                                                    {comboboxFilteredUnits.length > 0 ? comboboxFilteredUnits.map(unit => (
+                                                        <div key={unit.id} onClick={() => {
+                                                            setSelectedUnit(unit);
+                                                            setIsComboboxOpen(false);
+                                                        }} className="p-2 hover:bg-accent cursor-pointer flex justify-between items-center">
+                                                            <span>Unit {unit.unitNumber} ({unit.ownerName})</span>
+                                                            {selectedUnit?.id === unit.id && <Check className="h-4 w-4" />}
+                                                        </div>
+                                                    )) : (
+                                                        <p className="p-2 text-center text-sm text-muted-foreground">No units found.</p>
+                                                    )}
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                        {paymentForm.formState.errors.unitId && <p className="text-red-500 text-xs mt-1">{paymentForm.formState.errors.unitId.message}</p>}
+                                        
+                                        {selectedUnit && (
+                                            <div className="mt-2 text-xs text-muted-foreground border rounded-lg p-2 bg-background">
+                                                <p><b>Owner:</b> {selectedUnit.ownerName}</p>
+                                                <p><b>Size:</b> {selectedUnit.sqm} sqm</p>
+                                                <p><b>Quarterly Fee:</b> {selectedUnit.quarterlyMaintenanceFees.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
                                         <div>
-                                            <Label>Unit</Label>
-                                            <Controller
-                                                name="unitId"
-                                                control={paymentForm.control}
-                                                render={({ field }) => (
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <SelectTrigger><SelectValue placeholder="Select a unit" /></SelectTrigger>
-                                                        <SelectContent>
-                                                            {sortedAndFilteredUnits.map(u => <SelectItem key={u.id} value={u.id}>Unit {u.unitNumber} ({u.ownerName})</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            />
-                                            {paymentForm.formState.errors.unitId && <p className="text-red-500 text-xs mt-1">{paymentForm.formState.errors.unitId.message}</p>}
-                                        </div>
-                                         <div>
                                             <Label>Quarter</Label>
                                             <Controller
                                                 name="quarter"
@@ -1066,7 +1122,12 @@ export default function BuildingPage() {
                                     </div>
 
                                      <div className="flex justify-end gap-2">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddingPayment(false)}>Cancel</Button>
+                                        <Button type="button" variant="outline" onClick={() => {
+                                            setIsAddingPayment(false);
+                                            setSelectedUnit(null);
+                                            setComboboxSearch("");
+                                            paymentForm.reset();
+                                        }}>Cancel</Button>
                                         <Button type="submit" disabled={paymentForm.formState.isSubmitting}>
                                             {paymentForm.formState.isSubmitting ? 'Recording...' : 'Record Payment'}
                                         </Button>
@@ -1109,6 +1170,7 @@ export default function BuildingPage() {
                                                 <TableHead>Amount</TableHead>
                                                 <TableHead>Type</TableHead>
                                                 <TableHead>Notes</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -1125,11 +1187,16 @@ export default function BuildingPage() {
                                                             <TableCell>{payment.amount.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}</TableCell>
                                                             <TableCell>{payment.paymentType}</TableCell>
                                                             <TableCell className="max-w-xs truncate">{payment.notes || '—'}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button variant="ghost" size="icon" disabled>
+                                                                    <Edit className="h-4 w-4" />
+                                                                </Button>
+                                                            </TableCell>
                                                         </TableRow>
                                                     )
                                                 }) : (
                                                     <TableRow>
-                                                        <TableCell colSpan={7} className="h-24 text-center">
+                                                        <TableCell colSpan={8} className="h-24 text-center">
                                                             {paymentFilter.query || paymentFilter.quarter ? "No payments match your filter." : "No payments recorded yet."}
                                                         </TableCell>
                                                     </TableRow>

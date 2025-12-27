@@ -109,7 +109,7 @@ export default function EditUnitPage() {
     <main className="w-full max-w-2xl">
         <div className="mb-4">
              <Button variant="ghost" onClick={handleCancel} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
-                <ArrowLeft className="h-4 w-4" /> Back to Level
+                <ArrowLeft className="h-4 w-4" /> Back to Level View
             </Button>
         </div>
 
@@ -201,7 +201,3 @@ export default function EditUnitPage() {
     </main>
   );
 }
-
-    
-
-    

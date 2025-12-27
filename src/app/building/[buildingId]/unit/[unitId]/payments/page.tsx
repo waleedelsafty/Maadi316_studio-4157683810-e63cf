@@ -7,7 +7,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp, query, where, Timestamp } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, query, where, Timestamp, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { Payment, Unit } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -17,14 +17,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Edit, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const paymentTypes: Payment['paymentType'][] = ['Cash', 'Bank Transfer', 'Instapay Transfer'];
 
@@ -54,6 +54,7 @@ export default function UnitPaymentsPage() {
   const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [editingPaymentId, setEditingPaymentId] = React.useState<string | null>(null);
   
   const unitRef = React.useMemo(() => {
     if (!firestore || !buildingId || !unitId) return null;
@@ -75,6 +76,7 @@ export default function UnitPaymentsPage() {
     formState: { errors, isSubmitting },
     reset,
     control,
+    setValue,
   } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -84,48 +86,123 @@ export default function UnitPaymentsPage() {
         receiptUrl: '',
     }
   });
+
+  React.useEffect(() => {
+    if (unit && !editingPaymentId) {
+        setValue('amount', unit.quarterlyMaintenanceFees);
+    }
+  }, [unit, editingPaymentId, setValue]);
   
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     if (!firestore || !buildingId || !unitId) return;
 
     const paymentCollectionRef = collection(firestore, 'buildings', buildingId, 'payments');
-    const newPaymentData = {
-        ...data,
-        unitId,
-        paymentDate: Timestamp.fromDate(data.paymentDate),
-        createdAt: serverTimestamp(),
-    };
-
-    addDoc(paymentCollectionRef, newPaymentData)
-      .then(() => {
-        toast({
-          title: 'Payment Recorded',
-          description: `Payment for ${data.quarter} has been successfully recorded.`,
+    
+    if (editingPaymentId) {
+        // Update existing payment
+        const paymentDocRef = doc(firestore, 'buildings', buildingId, 'payments', editingPaymentId);
+        const updatedPaymentData = {
+            ...data,
+            paymentDate: Timestamp.fromDate(data.paymentDate),
+        };
+        updateDoc(paymentDocRef, updatedPaymentData).then(() => {
+            toast({ title: 'Payment Updated', description: 'The payment record has been updated.' });
+            setEditingPaymentId(null);
+            reset({
+                quarter: quarterOptions[0],
+                amount: unit?.quarterlyMaintenanceFees,
+                paymentType: 'Cash',
+                notes: '',
+                receiptUrl: '',
+            });
+        }).catch(() => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: paymentDocRef.path,
+                operation: 'update',
+                requestResourceData: updatedPaymentData,
+            }));
         });
-        reset();
-      })
-      .catch(() => {
-         errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: paymentCollectionRef.path,
-            operation: 'create',
-            requestResourceData: newPaymentData,
-        }));
-      });
+    } else {
+        // Add new payment
+        const newPaymentData = {
+            ...data,
+            unitId,
+            paymentDate: Timestamp.fromDate(data.paymentDate),
+            createdAt: serverTimestamp(),
+        };
+
+        addDoc(paymentCollectionRef, newPaymentData)
+          .then(() => {
+            toast({
+              title: 'Payment Recorded',
+              description: `Payment for ${data.quarter} has been successfully recorded.`,
+            });
+             reset({
+                quarter: quarterOptions[0],
+                amount: unit?.quarterlyMaintenanceFees,
+                paymentType: 'Cash',
+                notes: '',
+                receiptUrl: '',
+            });
+          })
+          .catch(() => {
+             errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: paymentCollectionRef.path,
+                operation: 'create',
+                requestResourceData: newPaymentData,
+            }));
+          });
+    }
+  };
+
+  const handleEditClick = (payment: Payment) => {
+    setEditingPaymentId(payment.id);
+    reset({
+        quarter: payment.quarter,
+        amount: payment.amount,
+        paymentDate: payment.paymentDate.toDate(),
+        paymentType: payment.paymentType,
+        receiptUrl: payment.receiptUrl,
+        notes: payment.notes,
+    });
+  }
+
+  const handleCancelEdit = () => {
+    setEditingPaymentId(null);
+    reset({
+        quarter: quarterOptions[0],
+        amount: unit?.quarterlyMaintenanceFees,
+        paymentType: 'Cash',
+        notes: '',
+        receiptUrl: '',
+    });
+  }
+  
+  const handleDeletePayment = (paymentId: string) => {
+      if (!firestore || !buildingId) return;
+      const paymentRef = doc(firestore, 'buildings', buildingId, 'payments', paymentId);
+      deleteDoc(paymentRef)
+        .then(() => {
+            toast({ title: "Payment Deleted", description: "The payment record has been removed." });
+        })
+        .catch(() => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: paymentRef.path, operation: 'delete' }));
+        });
   };
 
   return (
     <main className="w-full max-w-4xl space-y-6">
         <div className="mb-2">
              <Button variant="ghost" onClick={() => router.back()} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
-                <ArrowLeft className="h-4 w-4" /> Back to Unit
+                <ArrowLeft className="h-4 w-4" /> Back to Level View
             </Button>
         </div>
 
         <Card>
             <CardHeader>
-                <CardTitle>Record a New Payment</CardTitle>
+                <CardTitle>{editingPaymentId ? "Edit Payment" : "Record a New Payment"}</CardTitle>
                 <CardDescription>
-                    Record a new maintenance fee payment for Unit {unit?.unitNumber || '...'}.
+                    {editingPaymentId ? `Editing payment record for Unit ${unit?.unitNumber || '...'}` : `Record a new maintenance fee payment for Unit ${unit?.unitNumber || '...'}.`}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -203,9 +280,10 @@ export default function UnitPaymentsPage() {
                         {errors.notes && <p className="text-red-500 text-xs mt-1">{errors.notes.message}</p>}
                     </div>
 
-                     <div className="flex justify-end">
+                     <div className="flex justify-end gap-2">
+                        {editingPaymentId && <Button type="button" variant="outline" onClick={handleCancelEdit}>Cancel</Button>}
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Recording...' : 'Record Payment'}
+                            {isSubmitting ? 'Saving...' : (editingPaymentId ? 'Update Payment' : 'Record Payment')}
                         </Button>
                     </div>
                 </form>
@@ -227,29 +305,54 @@ export default function UnitPaymentsPage() {
                                 <TableHead>Amount</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>Notes</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {payments && payments.sort((a,b) => b.paymentDate.toMillis() - a.paymentDate.toMillis()).map((payment) => (
-                                <TableRow key={payment.id}>
+                            {payments && payments.length > 0 ? payments.sort((a,b) => b.paymentDate.toMillis() - a.paymentDate.toMillis()).map((payment) => (
+                                <TableRow key={payment.id} className={cn(editingPaymentId === payment.id && "bg-muted/50")}>
                                     <TableCell className="font-semibold">{payment.quarter}</TableCell>
                                     <TableCell>{format(payment.paymentDate.toDate(), 'PPP')}</TableCell>
-                                    <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                                    <TableCell>{payment.amount.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}</TableCell>
                                     <TableCell>{payment.paymentType}</TableCell>
                                     <TableCell className="max-w-xs truncate">{payment.notes || '—'}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex gap-2 justify-end">
+                                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(payment)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>This will permanently delete this payment record.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeletePayment(payment.id)}>Continue</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </TableCell>
                                 </TableRow>
-                            ))}
+                            )) : (
+                                 <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">
+                                        No payments have been recorded for this unit yet.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
-                     {payments && payments.length === 0 && (
-                        <div className="text-center p-8 text-muted-foreground">
-                            No payments have been recorded for this unit yet.
-                        </div>
-                    )}
                  </div>
             </CardContent>
         </Card>
     </main>
   );
 }
-
