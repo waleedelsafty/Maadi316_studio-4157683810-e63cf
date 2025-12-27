@@ -7,16 +7,14 @@ import { useFirestore, useDoc, useCollection, useUser } from '@/firebase';
 import { doc, collection, query, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import type { Building, Level, Unit, Payment } from '@/types';
-import { ArrowLeft, Edit, Download, ChevronDown, Trash2, ToyBrick, Landmark, PenSquare } from 'lucide-react';
+import type { Building, Level } from '@/types';
+import { ArrowLeft, Edit, Download, ChevronDown, Trash2, ToyBrick, Landmark } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,9 +22,8 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
-import { BuildingLevelsTab } from '@/components/building-levels-tab';
-import { BuildingUnitsTab } from '@/components/building-units-tab';
-import { BuildingPaymentsTab } from '@/components/building-payments-tab';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 
 function SoftDeleteDialog({ onConfirm, buildingName }: { onConfirm: () => void, buildingName: string }) {
@@ -120,10 +117,7 @@ export default function BuildingDashboardPage() {
         }
 
         const levelTypeMap = {
-            hasBasement: 'Basement',
-            hasMezzanine: 'Mezzanine',
-            hasPenthouse: 'Penthouse',
-            hasRooftop: 'Rooftop',
+            hasBasement: 'Basement', hasMezzanine: 'Mezzanine', hasPenthouse: 'Penthouse', hasRooftop: 'Rooftop',
         };
         const typeToCheck = levelTypeMap[field] as Level['type'];
         const existingLevelsOfType = levels?.filter(level => level.type === typeToCheck) || [];
@@ -156,8 +150,7 @@ export default function BuildingDashboardPage() {
         }
 
         const buildingInfoData = [
-            { Key: 'Building Name', Value: buildingName },
-            { Key: 'Address', Value: building.address },
+            { Key: 'Building Name', Value: buildingName }, { Key: 'Address', Value: building.address },
             { Key: 'Has Basement', Value: building.hasBasement ? `Yes (${building.basementCount || 1} level/s)`: 'No' },
             { Key: 'Has Mezzanine', Value: building.hasMezzanine ? `Yes (${building.mezzanineCount || 1} level/s)`: 'No' },
             { Key: 'Has Penthouse', Value: building.hasPenthouse ? 'Yes' : 'No' },
@@ -165,18 +158,14 @@ export default function BuildingDashboardPage() {
         ];
 
         const levelsData = (levels || []).map(level => ({
-            'Level Name': level.name,
-            'Type': level.type,
+            'Level Name': level.name, 'Type': level.type,
             'Floor Number': level.type === 'Typical Floor' ? level.floorNumber : 'N/A',
         }));
 
         const levelsMap = new Map((levels || []).map(l => [l.id, l.name]));
         const unitsData = (units || []).map(unit => ({
-            'Unit #': unit.unitNumber,
-            'Level': levelsMap.get(unit.levelId) || 'Unknown',
-            'Type': unit.type,
-            'Size (sqm)': unit.sqm,
-            'Owner': unit.ownerName,
+            'Unit #': unit.unitNumber, 'Level': levelsMap.get(unit.levelId) || 'Unknown',
+            'Type': unit.type, 'Size (sqm)': unit.sqm, 'Owner': unit.ownerName,
             'Quarterly Maintenance': unit.quarterlyMaintenanceFees,
         }));
         
@@ -191,7 +180,6 @@ export default function BuildingDashboardPage() {
 
         const fileName = `${buildingName.replace(/\s+/g, '_')}_Export.xlsx`;
         XLSX.writeFile(wb, fileName);
-
         toast({ title: 'Export Complete', description: `Building data saved to ${fileName}.` });
     };
     
@@ -203,28 +191,18 @@ export default function BuildingDashboardPage() {
             return;
         }
 
-        const exportData = {
-            ...building,
-            Building_name: buildingName,
-            levels: levels,
-            units: units,
-        };
-
+        const exportData = { ...building, Building_name: buildingName, levels: levels, units: units };
         const jsonString = JSON.stringify(exportData, null, 2);
         const blob = new Blob([jsonString], { type: "application/json" });
         const fileName = `${buildingName.replace(/\s+/g, '_')}_Export.json`;
         saveAs(blob, fileName);
-
         toast({ title: 'Export Complete', description: `Building data saved to ${fileName}.` });
     }
 
     const handleSoftDelete = async () => {
         if (!buildingRef) return;
         await updateDoc(buildingRef, { isDeleted: true });
-        toast({
-            title: "Building Deleted",
-            description: "The building has been moved to the recycle bin."
-        });
+        toast({ title: "Building Deleted", description: "The building has been moved to the recycle bin." });
         router.push('/');
     };
     
@@ -232,24 +210,20 @@ export default function BuildingDashboardPage() {
 
     if (building && user && building.ownerId !== user.uid) {
         return (
-            <div className="text-center">
+            <div className="text-center py-10">
                 <p className="text-2xl font-bold">Access Denied</p>
                 <p>You do not have permission to view this building.</p>
-                <Button asChild className="mt-4">
-                    <Link href="/">Go to Homepage</Link>
-                </Button>
+                <Button asChild className="mt-4"><Link href="/">Go to Homepage</Link></Button>
             </div>
         )
     }
 
     if (building?.isDeleted) {
         return (
-            <div className="text-center">
+            <div className="text-center py-10">
                 <p className="text-2xl font-bold">Building Deleted</p>
                 <p>This building is in the recycle bin. You can restore it from the settings page.</p>
-                 <Button asChild className="mt-4">
-                    <Link href="/settings/recycle-bin">Go to Recycle Bin</Link>
-                </Button>
+                 <Button asChild className="mt-4"><Link href="/settings/recycle-bin">Go to Recycle Bin</Link></Button>
             </div>
         )
     }
@@ -271,11 +245,7 @@ export default function BuildingDashboardPage() {
                     <CardContent className="flex-grow">
                         <p className="text-sm text-muted-foreground">Define the physical layout of your property, from basement levels to individual apartments or offices.</p>
                     </CardContent>
-                    <div className="p-4 pt-0">
-                        <Button asChild>
-                            <Link href={`/building/${buildingId}/structure`}>Manage Structure</Link>
-                        </Button>
-                    </div>
+                    <div className="p-4 pt-0"><Button asChild><Link href={`/building/${buildingId}/structure`}>Manage Structure</Link></Button></div>
                 </Card>
                  <Card className="flex flex-col">
                     <CardHeader>
@@ -285,14 +255,9 @@ export default function BuildingDashboardPage() {
                      <CardContent className="flex-grow">
                         <p className="text-sm text-muted-foreground">View payment histories, record new maintenance fee transactions, and monitor outstanding balances.</p>
                     </CardContent>
-                     <div className="p-4 pt-0">
-                        <Button asChild>
-                            <Link href={`/building/${buildingId}/financials`}>Manage Financials</Link>
-                        </Button>
-                    </div>
+                     <div className="p-4 pt-0"><Button asChild><Link href={`/building/${buildingId}/financials`}>Manage Financials</Link></Button></div>
                 </Card>
             </div>
-
 
             <Card>
                 <CardHeader className="p-4">
@@ -305,9 +270,7 @@ export default function BuildingDashboardPage() {
                              <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="sm" disabled={!building || !levels || !units}>
-                                        <Download className="mr-2 h-4 w-4" />
-                                        Export Data
-                                        <ChevronDown className="ml-2 h-4 w-4" />
+                                        <Download className="mr-2 h-4 w-4" /> Export Data <ChevronDown className="ml-2 h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent>
@@ -316,9 +279,7 @@ export default function BuildingDashboardPage() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                             <Button variant="outline" size="sm" asChild>
-                                <Link href={`/building/${buildingId}/edit`}>
-                                    <Edit className="mr-2 h-4 w-4" /> Edit Building
-                                </Link>
+                                <Link href={`/building/${buildingId}/edit`}><Edit className="mr-2 h-4 w-4" /> Edit Building</Link>
                             </Button>
                         </div>
                     </div>
@@ -332,9 +293,7 @@ export default function BuildingDashboardPage() {
                                  {building.financialStartDate && (
                                     <div className="flex items-center justify-between min-h-[40px] border-b">
                                         <label className="text-sm font-medium text-muted-foreground w-1/3">Financial Start Date</label>
-                                        <div className="w-2/3 text-right">
-                                            <p className="text-sm font-semibold">{format(building.financialStartDate.toDate(), 'PPP')}</p>
-                                        </div>
+                                        <div className="w-2/3 text-right"><p className="text-sm font-semibold">{format(building.financialStartDate.toDate(), 'PPP')}</p></div>
                                     </div>
                                 )}
                            </div>
@@ -381,10 +340,8 @@ export default function BuildingDashboardPage() {
                             <Skeleton className="h-8 w-1/2 bg-muted rounded animate-pulse" />
                             <Skeleton className="h-8 w-2/3 bg-muted rounded animate-pulse" />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                                <div className="h-12 bg-muted rounded animate-pulse" />
-                                <div className="h-12 bg-muted rounded animate-pulse" />
-                                <div className="h-12 bg-muted rounded animate-pulse" />
-                                <div className="h-12 bg-muted rounded animate-pulse" />
+                                <div className="h-12 bg-muted rounded animate-pulse" /><div className="h-12 bg-muted rounded animate-pulse" />
+                                <div className="h-12 bg-muted rounded animate-pulse" /><div className="h-12 bg-muted rounded animate-pulse" />
                             </div>
                         </>
                     )}
@@ -394,17 +351,12 @@ export default function BuildingDashboardPage() {
             <Card className="border-destructive">
                 <CardHeader className="p-4">
                     <CardTitle>Danger Zone</CardTitle>
-                    <CardDescription>
-                        This action is irreversible. Once deleted, the building will be moved to the recycle bin.
-                    </CardDescription>
+                    <CardDescription>This action is irreversible. Once deleted, the building will be moved to the recycle bin.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" disabled={!building}>
-                                <Trash2 className="mr-2" />
-                                Delete Building
-                            </Button>
+                            <Button variant="destructive" disabled={!building}><Trash2 className="mr-2" /> Delete Building</Button>
                         </AlertDialogTrigger>
                          {building && <SoftDeleteDialog onConfirm={handleSoftDelete} buildingName={buildingName} />}
                      </AlertDialog>
@@ -417,9 +369,7 @@ export default function BuildingDashboardPage() {
                         <AlertDialogTitle>{validationError?.title}</AlertDialogTitle>
                         <AlertDialogDescription>{validationError?.description}</AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogAction onClick={() => setValidationError(null)}>OK</AlertDialogAction>
-                    </AlertDialogFooter>
+                    <AlertDialogFooter><AlertDialogAction onClick={() => setValidationError(null)}>OK</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
         </main>
