@@ -187,7 +187,7 @@ export default function BuildingPage() {
             const quartersSinceCreation = getQuartersSince(unit.createdAt?.toDate());
             const totalDue = quartersSinceCreation * (unit.quarterlyMaintenanceFees || 0);
             const totalPaid = paymentsByUnit.get(unit.id) || 0;
-            balances.set(unit.id, totalDue - totalPaid);
+            balances.set(unit.id, totalPaid - totalDue);
         });
         return balances;
     }, [units, paymentsByUnit]);
@@ -810,7 +810,7 @@ export default function BuildingPage() {
                                                     {columnVisibility.type && <TableCell>{unit.type}</TableCell>}
                                                     {columnVisibility.level && <TableCell>{levelsMap.get(unit.levelId) || 'N/A'}</TableCell>}
                                                     {columnVisibility.owner && <TableCell>{unit.ownerName}</TableCell>}
-                                                    <TableCell className={balance > 0 ? 'text-destructive' : ''}>
+                                                    <TableCell className={balance < 0 ? 'text-destructive' : ''}>
                                                         {balance.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
                                                     </TableCell>
                                                     <TableCell className="text-right">
