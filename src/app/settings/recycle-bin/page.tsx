@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 
 function PermanentDeleteDialog({ onConfirm, buildingName }: { onConfirm: () => void, buildingName: string }) {
     const [inputValue, setInputValue] = useState("");
-    const expectedText = "permanently delete this";
+    const expectedText = "yes delete";
     const isMatch = inputValue === expectedText;
 
     return (
