@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -14,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit, Payment } from '@/types';
-import { ArrowLeft, Edit, Download, ChevronDown, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Download, ChevronDown, Trash2, ToyBrick, Landmark, PenSquare } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -24,7 +23,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { BuildingLevelsTab } from '@/components/building-levels-tab';
 import { BuildingUnitsTab } from '@/components/building-units-tab';
@@ -60,17 +58,15 @@ function SoftDeleteDialog({ onConfirm, buildingName }: { onConfirm: () => void, 
     );
 }
 
-export default function BuildingPage() {
+export default function BuildingDashboardPage() {
     const { buildingId } = useParams() as { buildingId: string };
     const router = useRouter();
     const firestore = useFirestore();
     const user = useUser();
     const { toast } = useToast();
 
-    // State for common UI
     const [validationError, setValidationError] = useState<{ title: string, description: string} | null>(null);
     
-    // Firestore Hooks
     const buildingRef = useMemo(() => {
         if (!firestore || !buildingId) return null;
         return doc(firestore, 'buildings', buildingId);
@@ -90,13 +86,6 @@ export default function BuildingPage() {
         return query(collection(firestore, 'buildings', buildingId, 'units'));
     }, [firestore, buildingId]);
     const { data: units } = useCollection(unitsQuery);
-
-    const paymentsQuery = useMemo(() => {
-        if (!firestore || !buildingId) return null;
-        return query(collection(firestore, 'buildings', buildingId, 'payments'));
-    }, [firestore, buildingId]);
-    const { data: payments } = useCollection(paymentsQuery);
-
 
     const handleUpdateBuilding = async (field: keyof Building, value: string | boolean | number) => {
         if (!buildingRef) return;
@@ -268,10 +257,42 @@ export default function BuildingPage() {
     return (
         <main className="w-full space-y-4">
             <div className="mb-2">
-                <Button variant="ghost" onClick={() => router.back()} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
-                    <ArrowLeft className="h-4 w-4" /> Back
+                <Button variant="ghost" onClick={() => router.push('/buildings')} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
+                    <ArrowLeft className="h-4 w-4" /> Back to My Buildings
                 </Button>
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><ToyBrick className="text-primary"/> Structure Management</CardTitle>
+                        <CardDescription>Manage the levels and units that make up your building.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                        <p className="text-sm text-muted-foreground">Define the physical layout of your property, from basement levels to individual apartments or offices.</p>
+                    </CardContent>
+                    <div className="p-4 pt-0">
+                        <Button asChild>
+                            <Link href={`/building/${buildingId}/structure`}>Manage Structure</Link>
+                        </Button>
+                    </div>
+                </Card>
+                 <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Landmark className="text-primary" /> Financial Management</CardTitle>
+                        <CardDescription>Record payments and track the financial status of all units.</CardDescription>
+                    </CardHeader>
+                     <CardContent className="flex-grow">
+                        <p className="text-sm text-muted-foreground">View payment histories, record new maintenance fee transactions, and monitor outstanding balances.</p>
+                    </CardContent>
+                     <div className="p-4 pt-0">
+                        <Button asChild>
+                            <Link href={`/building/${buildingId}/financials`}>Manage Financials</Link>
+                        </Button>
+                    </div>
+                </Card>
+            </div>
+
 
             <Card>
                 <CardHeader className="p-4">
@@ -369,26 +390,6 @@ export default function BuildingPage() {
                     )}
                 </CardContent>
             </Card>
-
-            <Tabs defaultValue="levels" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="levels">Levels</TabsTrigger>
-                    <TabsTrigger value="units">All Units</TabsTrigger>
-                    <TabsTrigger value="payments">Payments</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="levels">
-                   <BuildingLevelsTab building={building} levels={levels} units={units} />
-                </TabsContent>
-                
-                <TabsContent value="units">
-                    <BuildingUnitsTab building={building} levels={levels} units={units} payments={payments} />
-                </TabsContent>
-
-                <TabsContent value="payments">
-                   <BuildingPaymentsTab building={building} units={units} payments={payments} />
-                </TabsContent>
-            </Tabs>
 
             <Card className="border-destructive">
                 <CardHeader className="p-4">

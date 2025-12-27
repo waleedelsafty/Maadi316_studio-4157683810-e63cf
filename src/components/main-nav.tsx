@@ -18,10 +18,12 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
-import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard, Trash2, Palette, Code } from 'lucide-react';
+import { Home, LogOut, Settings, Building, User as UserIcon, LayoutDashboard, Trash2, Palette, Code, DollarSign, PenSquare, Landmark, ToyBrick } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { ThemeToggle } from './theme-toggle';
 
@@ -55,23 +57,31 @@ export function MainNav({ children }: { children: React.ReactNode }) {
   }
 
   const getPageTitle = () => {
-    if (pathname === '/') return 'Dashboard';
-    if (pathname.startsWith('/building/')) {
-        if (pathname.includes('/level/')) {
-            return 'Level Details';
-        }
-        if (pathname.includes('/unit/') && pathname.includes('/edit')) {
-            return 'Edit Unit';
-        }
-        if (pathname.includes('/unit/') && pathname.includes('/payments')) {
-            return 'Payment History';
-        }
-        return 'Building Details';
+    const pathParts = pathname.split('/').filter(Boolean);
+
+    if (pathParts.length === 0) return 'Dashboard';
+    if (pathParts[0] === 'buildings') {
+        if (pathParts[1] === 'new') return 'Add New Building';
+        return 'My Buildings';
     }
-    if (pathname === '/buildings') return 'My Buildings';
-    if (pathname.startsWith('/settings')) return 'Settings';
+    if (pathParts[0] === 'settings') return 'Settings';
+
+    if (pathParts[0] === 'building' && pathParts.length > 1) {
+        const buildingId = pathParts[1];
+        if (pathParts[2] === 'edit') return 'Edit Building';
+        if (pathParts[2] === 'structure') return 'Building Structure';
+        if (pathParts[2] === 'financials') return 'Building Financials';
+        if (pathParts[2] === 'level') return 'Level Details';
+        if (pathParts[2] === 'unit') {
+            if (pathParts[4] === 'edit') return 'Edit Unit';
+            if (pathParts[4] === 'payments') return 'Unit Payments';
+        }
+        return 'Building Dashboard';
+    }
     return 'Dashboard';
   }
+  
+  const buildingId = pathname.includes('/building/') ? pathname.split('/')[2] : null;
 
 
   return (
@@ -111,7 +121,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
-                  isActive={pathname === '/buildings'}
+                  isActive={pathname === '/buildings' || pathname === '/buildings/new'}
                   tooltip="My Buildings"
                 >
                     <Link href="/buildings">
@@ -120,6 +130,48 @@ export function MainNav({ children }: { children: React.ReactNode }) {
                     </Link>
                 </SidebarMenuButton>
              </SidebarMenuItem>
+             {buildingId && (
+                <>
+                <Separator className="my-2" />
+                 <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild
+                      isActive={pathname === `/building/${buildingId}`}
+                      tooltip="Building Dashboard"
+                    >
+                        <Link href={`/building/${buildingId}`}>
+                            <PenSquare />
+                            <span>Dashboard</span>
+                        </Link>
+                    </SidebarMenuButton>
+                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild
+                      isActive={pathname.includes('/structure')}
+                      tooltip="Structure"
+                    >
+                        <Link href={`/building/${buildingId}/structure`}>
+                            <ToyBrick />
+                            <span>Structure</span>
+                        </Link>
+                    </SidebarMenuButton>
+                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild
+                      isActive={pathname.includes('/financials')}
+                      tooltip="Financials"
+                    >
+                        <Link href={`/building/${buildingId}/financials`}>
+                            <Landmark />
+                            <span>Financials</span>
+                        </Link>
+                    </SidebarMenuButton>
+                 </SidebarMenuItem>
+                <Separator className="my-2" />
+                </>
+             )}
              <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
@@ -163,5 +215,3 @@ export function MainNav({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
-    
