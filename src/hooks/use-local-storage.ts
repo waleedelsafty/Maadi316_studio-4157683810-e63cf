@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect }mport { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
   // State to store our value
