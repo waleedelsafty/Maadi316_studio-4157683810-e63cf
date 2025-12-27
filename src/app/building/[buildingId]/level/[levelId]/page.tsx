@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit } from '@/types';
-import { ArrowLeft, Edit } from 'lucide-react';
+import { ArrowLeft, Edit, DollarSign } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LevelFormSheet } from '@/components/level-form-sheet';
@@ -180,6 +180,11 @@ export default function LevelPage() {
                                                 <TableCell className="text-right">
                                                      <div className="flex gap-2 justify-end">
                                                         <Button variant="outline" size="sm" asChild>
+                                                            <Link href={`/building/${buildingId}/unit/${unit.id}/payments`}>
+                                                                <DollarSign className="mr-2 h-4 w-4" /> Payments
+                                                            </Link>
+                                                        </Button>
+                                                        <Button variant="outline" size="sm" asChild>
                                                             <Link href={`/building/${buildingId}/unit/${unit.id}/edit`}>Edit</Link>
                                                         </Button>
                                                         <AlertDialog>
@@ -225,6 +230,8 @@ export default function LevelPage() {
         </main>
     );
 }
+
+    
 
     
 

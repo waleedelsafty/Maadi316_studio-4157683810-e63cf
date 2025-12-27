@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, History } from 'lucide-react';
+import { ArrowLeft, DollarSign } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
@@ -125,8 +125,8 @@ export default function EditUnitPage() {
                         </div>
                         <Button variant="outline" asChild>
                             <Link href={`/building/${buildingId}/unit/${unitId}/payments`}>
-                                <History className="mr-2 h-4 w-4" />
-                                View Payments
+                                <DollarSign className="mr-2 h-4 w-4" />
+                                Record/View Payments
                             </Link>
                         </Button>
                     </div>
@@ -201,5 +201,7 @@ export default function EditUnitPage() {
     </main>
   );
 }
+
+    
 
     
