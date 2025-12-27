@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { Building, Level, Unit } from '@/types';
-import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { BuildingFormSheet } from '@/components/building-form-sheet';
@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -143,6 +144,11 @@ export default function BuildingPage() {
     }, [firestore, buildingId]);
 
     const { data: levels } = useCollection(levelsQuery);
+    
+    const levelsMap = useMemo(() => {
+        if (!levels) return new Map();
+        return new Map(levels.map(l => [l.id, l.name]));
+    }, [levels]);
 
     const unitsQuery = useMemo(() => {
         if (!firestore || !buildingId) return null;
@@ -332,13 +338,15 @@ export default function BuildingPage() {
             });
     };
     
-    const handleDeleteLevel = (levelId: string) => {
+    const handleDelete = (collectionName: 'levels' | 'units', id: string) => {
         if (!firestore || !buildingId) return;
-        const levelRef = doc(firestore, 'buildings', buildingId, 'levels', levelId);
-        deleteDoc(levelRef).then(() => {
-            toast({ title: "Level Deleted", description: "The level has been successfully removed." })
+        const itemRef = doc(firestore, 'buildings', buildingId, collectionName, id);
+        const itemName = collectionName === 'levels' ? 'Level' : 'Unit';
+
+        deleteDoc(itemRef).then(() => {
+            toast({ title: `${itemName} Deleted`, description: `The ${itemName.toLowerCase()} has been successfully removed.` })
         }).catch((serverError) => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: levelRef.path, operation: 'delete' }));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: itemRef.path, operation: 'delete' }));
         })
     }
     
@@ -381,7 +389,6 @@ export default function BuildingPage() {
             'Floor Number': level.type === 'Typical Floor' ? level.floorNumber : 'N/A',
         }));
 
-        const levelsMap = new Map(levels.map(l => [l.id, l.name]));
         const unitsData = (units || []).map(unit => ({
             'Unit #': unit.unitNumber,
             'Level': levelsMap.get(unit.levelId) || 'Unknown',
@@ -563,74 +570,144 @@ export default function BuildingPage() {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
+            <Tabs defaultValue="levels">
+                <div className="flex justify-between items-end">
+                    <TabsList>
+                        <TabsTrigger value="levels">Levels</TabsTrigger>
+                        <TabsTrigger value="units">All Units</TabsTrigger>
+                    </TabsList>
+                    <div className="pb-2">
+                        {!isAddingLevel && <Button onClick={() => setIsAddingLevel(true)}>Add New Level</Button>}
+                    </div>
+                </div>
+                <TabsContent value="levels">
+                    <Card>
+                        <CardHeader>
                             <CardTitle>Building Levels</CardTitle>
                             <CardDescription>Define the structure of your building by adding and managing its levels.</CardDescription>
-                        </div>
-                         {!isAddingLevel && ( <Button onClick={() => setIsAddingLevel(true)}>Add New Level</Button> )}
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {isAddingLevel && (
-                        <form onSubmit={handleAddLevel} className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                            <h3 className="font-medium">Add a New Level</h3>
-                            <div className="grid sm:grid-cols-3 gap-4">
-                                <Input placeholder="Level Name (e.g., 'Lobby')" value={levelName} onChange={(e) => setLevelName(e.target.value)} required className="sm:col-span-2"/>
-                                <Select onValueChange={(value) => setLevelType(value as Level['type'])} value={levelType}>
-                                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                                    <SelectContent>{availableLevelTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent>
-                                </Select>
-                            </div>
-                            {levelType === 'Typical Floor' && (
-                                <Input type="number" placeholder="Floor Number (e.g., 1, 2, 3...)" value={floorNumber} onChange={(e) => setFloorNumber(Number(e.target.value))} required />
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {isAddingLevel && (
+                                <form onSubmit={handleAddLevel} className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                                    <h3 className="font-medium">Add a New Level</h3>
+                                    <div className="grid sm:grid-cols-3 gap-4">
+                                        <Input placeholder="Level Name (e.g., 'Lobby')" value={levelName} onChange={(e) => setLevelName(e.target.value)} required className="sm:col-span-2"/>
+                                        <Select onValueChange={(value) => setLevelType(value as Level['type'])} value={levelType}>
+                                            <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                                            <SelectContent>{availableLevelTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent>
+                                        </Select>
+                                    </div>
+                                    {levelType === 'Typical Floor' && (
+                                        <Input type="number" placeholder="Floor Number (e.g., 1, 2, 3...)" value={floorNumber} onChange={(e) => setFloorNumber(Number(e.target.value))} required />
+                                    )}
+                                    <div className="flex gap-2">
+                                        <Button type="submit">Save Level</Button>
+                                        <Button variant="outline" onClick={() => setIsAddingLevel(false)}>Cancel</Button>
+                                    </div>
+                                </form>
                             )}
-                            <div className="flex gap-2">
-                                <Button type="submit">Save Level</Button>
-                                <Button variant="outline" onClick={() => setIsAddingLevel(false)}>Cancel</Button>
+                            <div className="space-y-4">
+                                {sortedLevels && sortedLevels.length > 0 ? (
+                                    <div className="border rounded-lg">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>
+                                                        <Button variant="ghost" onClick={() => handleSort('name')} className="px-0">
+                                                            Level Name
+                                                            {renderSortIcon('name')}
+                                                        </Button>
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" onClick={() => handleSort('type')} className="px-0">
+                                                            Type
+                                                            {renderSortIcon('type')}
+                                                        </Button>
+                                                    </TableHead>
+                                                    <TableHead className="text-center">
+                                                        <Button variant="ghost" onClick={() => handleSort('units')} className="px-0 mx-auto">
+                                                            Units
+                                                            {renderSortIcon('units')}
+                                                        </Button>
+                                                    </TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {sortedLevels.map((level) => (
+                                                    <LevelRow key={level.id} level={level} buildingId={buildingId} onDelete={(id) => handleDelete('levels', id)} unitCount={unitCountsByLevel.get(level.id) || 0} />
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                ) : ( <div className="text-center py-12 rounded-lg border border-dashed"><p className="text-muted-foreground">No levels have been added yet.</p></div> )}
                             </div>
-                        </form>
-                    )}
-                    <div className="space-y-4">
-                        {sortedLevels && sortedLevels.length > 0 ? (
-                            <div className="border rounded-lg">
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                 <TabsContent value="units">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>All Units</CardTitle>
+                            <CardDescription>A complete list of every unit in "{buildingName}".</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="border rounded-lg">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>
-                                                 <Button variant="ghost" onClick={() => handleSort('name')} className="px-0">
-                                                    Level Name
-                                                    {renderSortIcon('name')}
-                                                </Button>
-                                            </TableHead>
-                                            <TableHead>
-                                                <Button variant="ghost" onClick={() => handleSort('type')} className="px-0">
-                                                    Type
-                                                    {renderSortIcon('type')}
-                                                </Button>
-                                            </TableHead>
-                                            <TableHead className="text-center">
-                                                <Button variant="ghost" onClick={() => handleSort('units')} className="px-0 mx-auto">
-                                                    Units
-                                                    {renderSortIcon('units')}
-                                                </Button>
-                                            </TableHead>
+                                            <TableHead>Unit #</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead>Level</TableHead>
+                                            <TableHead>Owner</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {sortedLevels.map((level) => (
-                                            <LevelRow key={level.id} level={level} buildingId={buildingId} onDelete={handleDeleteLevel} unitCount={unitCountsByLevel.get(level.id) || 0} />
-                                        ))}
+                                        {units && units.length > 0 ? units.map((unit) => (
+                                            <TableRow key={unit.id}>
+                                                <TableCell className="font-semibold">{unit.unitNumber}</TableCell>
+                                                <TableCell>{unit.type}</TableCell>
+                                                <TableCell>{levelsMap.get(unit.levelId) || 'N/A'}</TableCell>
+                                                <TableCell>{unit.ownerName}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex gap-2 justify-end">
+                                                        <Button variant="outline" size="sm" asChild>
+                                                            <Link href={`/building/${buildingId}/unit/${unit.id}/payments`}>
+                                                                <DollarSign className="mr-2 h-4 w-4" /> Payments
+                                                            </Link>
+                                                        </Button>
+                                                         <Button variant="outline" size="sm" asChild>
+                                                            <Link href={`/building/${buildingId}/unit/${unit.id}/edit`}>Edit</Link>
+                                                        </Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild><Button variant="destructive" size="sm">Delete</Button></AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>This will permanently delete unit "{unit.unitNumber}".</AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete('units', unit.id)}>Continue</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center h-24">No units found in this building.</TableCell>
+                                            </TableRow>
+                                        )}
                                     </TableBody>
                                 </Table>
                             </div>
-                        ) : ( <div className="text-center py-12 rounded-lg border border-dashed"><p className="text-muted-foreground">No levels have been added yet.</p></div> )}
-                     </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
 
             <Card className="border-destructive">
                 <CardHeader>
@@ -673,6 +750,8 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    
 
     
 
