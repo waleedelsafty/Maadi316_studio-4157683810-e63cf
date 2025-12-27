@@ -133,9 +133,6 @@ function BuildingRow({ building }: { building: Building }) {
             <TableCell className="text-center">
                 {levelInfo.hasPenthouse && <CheckIcon className="mx-auto" />}
             </TableCell>
-             <TableCell className="text-center">
-                {levelInfo.hasRooftop && <CheckIcon className="mx-auto" />}
-            </TableCell>
             <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                      <Button variant="outline" size="sm" asChild>
@@ -208,7 +205,6 @@ export default function BuildingsPage() {
                         <TableHead className="text-center">Ground</TableHead>
                         <TableHead className="text-center">Typical Floors</TableHead>
                         <TableHead className="text-center">Penthouse</TableHead>
-                        <TableHead className="text-center">Rooftop</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -228,7 +224,6 @@ export default function BuildingsPage() {
                     <TableHead className="text-center">Ground</TableHead>
                     <TableHead className="text-center">Typical Floors</TableHead>
                     <TableHead className="text-center">Penthouse</TableHead>
-                    <TableHead className="text-center">Rooftop</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
