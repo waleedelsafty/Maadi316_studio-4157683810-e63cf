@@ -14,6 +14,14 @@ This is a Next.js application built with Firebase Studio for managing building i
 
 ## Version History
 
+### v0.1.8
+- **Major Architectural Refactoring**: The monolithic building detail page has been broken down into a more stable and maintainable multi-page structure to resolve critical performance issues in the development environment.
+- **New Building Dashboard**: The main page for a building (`/building/[buildingId]`) now serves as a clean dashboard, providing summary information and links to dedicated management sections.
+- **Dedicated Structure Page**: A new "Structure" page (`/building/[buildingId]/structure`) is now the central place for creating and managing all building levels and their associated units.
+- **Dedicated Financials Page**: A new "Financials" page (`/building/[buildingId]/financials`) now handles all payment recording and financial status tracking for every unit in the building.
+- **Contextual Sidebar Navigation**: The main sidebar is now smarter, displaying contextual links for "Structure" and "Financials" only when a user is actively viewing a building.
+- **Critical Bug Fixes**: Resolved numerous client-side crashes and navigation errors that arose during the refactoring process, including fixing broken links, incorrect component imports, and table layout mismatches.
+
 ### v0.1.7
 - **Centralized Payments Tab**: Added a dedicated "Payments" tab on the building detail page, creating a single place to record and view all financial transactions for a building.
 - **Smart Payment Form**: The "Record Payment" form now features a searchable combobox to find units by number or owner name. When a unit is selected, its details are displayed and the "Amount Paid" field is auto-filled with the quarterly fee.
