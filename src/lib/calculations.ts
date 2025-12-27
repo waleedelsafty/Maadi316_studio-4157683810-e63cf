@@ -1,41 +1,77 @@
 
 // src/lib/calculations.ts
+import { startOfQuarter, isBefore, addQuarters, getYear, getQuarter as getQuarterFns } from 'date-fns';
+
+type QuarterRangeOption = 'current_quarter' | 'year_to_date' | 'all_since_start';
+
+export type Quarter = {
+    year: number;
+    quarter: 1 | 2 | 3 | 4;
+};
+
+export function formatQuarter(q: Quarter): string {
+    return `Q${q.quarter} ${q.year}`;
+}
+
+export function getCurrentQuarter(): Quarter {
+    const now = new Date();
+    return {
+        year: getYear(now),
+        quarter: getQuarterFns(now) as Quarter['quarter']
+    };
+}
+
 
 /**
- * Calculates the number of full quarters that have passed between a start date and an end date.
- * A quarter starts on Jan 1, Apr 1, Jul 1, Oct 1.
- * This calculation is inclusive of the start and end quarters.
- * @param calculationStartDate The starting date for the calculation.
- * @returns The number of quarters that have started.
+ * Generates an array of quarter strings (e.g., "Q1 2024") for a given date range.
+ * @param financialStartDate The start date of the financial period.
+ * @param rangeOption The time range to calculate for.
+ * @returns An array of quarter strings.
  */
-export function getQuartersSince(calculationStartDate: Date | null | undefined): number {
-    if (!calculationStartDate) {
-        return 0;
+export function getQuartersForRange(
+    financialStartDate: Date | null | undefined,
+    rangeOption: QuarterRangeOption
+): string[] {
+    if (!financialStartDate) {
+        return [];
     }
 
-    const start = new Date(calculationStartDate);
-    const end = new Date(); // Today
+    const now = new Date();
+    const quarters: string[] = [];
 
-    // If start date is in the future, no quarters have passed.
-    if (start > end) {
-        return 0;
+    let startDate: Date;
+    const currentQuarterInfo = getCurrentQuarter();
+
+    switch (rangeOption) {
+        case 'current_quarter':
+            return [formatQuarter(currentQuarterInfo)];
+        
+        case 'year_to_date':
+            startDate = new Date(currentQuarterInfo.year, 0, 1); // January 1st of the current year
+            break;
+            
+        case 'all_since_start':
+        default:
+            startDate = financialStartDate;
+            break;
     }
 
-    const startYear = start.getFullYear();
-    // 0-indexed quarter (0 for Q1, 1 for Q2, etc.)
-    const startQuarter = Math.floor(start.getMonth() / 3); 
+    // Align the start date with the beginning of its quarter
+    let currentQuarterDate = startOfQuarter(startDate);
+    
+    // Ensure we don't start before the financial start date's quarter
+    if (isBefore(currentQuarterDate, startOfQuarter(financialStartDate))) {
+        currentQuarterDate = startOfQuarter(financialStartDate);
+    }
 
-    const endYear = end.getFullYear();
-    const endQuarter = Math.floor(end.getMonth() / 3);
-
-    // Calculate the difference in years and multiply by 4 quarters per year.
-    const yearDifferenceInQuarters = (endYear - startYear) * 4;
-
-    // Calculate the difference in quarters within the year.
-    const quarterDifference = endQuarter - startQuarter;
-
-    // Add 1 to be inclusive of the starting quarter.
-    const totalQuarters = yearDifferenceInQuarters + quarterDifference + 1;
-
-    return totalQuarters > 0 ? totalQuarters : 0;
+    while (isBefore(currentQuarterDate, now) || currentQuarterDate.getTime() === startOfQuarter(now).getTime()) {
+        const year = getYear(currentQuarterDate);
+        const quarter = getQuarterFns(currentQuarterDate) as Quarter['quarter'];
+        quarters.push(formatQuarter({ year, quarter }));
+        
+        // Move to the next quarter
+        currentQuarterDate = addQuarters(currentQuarterDate, 1);
+    }
+    
+    return quarters;
 }

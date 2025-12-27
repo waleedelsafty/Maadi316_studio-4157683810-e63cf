@@ -27,7 +27,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { defaultColumnVisibility, type UnitColumnVisibility } from '@/app/settings/display/page';
-import { getQuartersSince } from '@/lib/calculations';
+import { getQuartersForRange, formatQuarter, getCurrentQuarter } from '@/lib/calculations';
 import { format } from 'date-fns';
 
 
@@ -107,8 +107,9 @@ function SoftDeleteDialog({ onConfirm, buildingName }: { onConfirm: () => void, 
 
 
 type SortKey = 'name' | 'type' | 'units';
-type UnitSortKey = 'unitNumber' | 'type' | 'levelId' | 'ownerName' | 'balanceDue';
+type UnitSortKey = 'unitNumber' | 'type' | 'levelId' | 'ownerName' | 'balance';
 type SortDirection = 'asc' | 'desc';
+type QuarterRangeOption = 'current_quarter' | 'year_to_date' | 'all_since_start';
 
 export default function BuildingPage() {
     const { buildingId } = useParams() as { buildingId: string };
@@ -126,11 +127,11 @@ export default function BuildingPage() {
     // State for Sorting and Filtering
     const [sortKey, setSortKey] = useState<SortKey>('type');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-    const [unitSortKey, setUnitSortKey] = useState<UnitSortKey>('balanceDue');
-    const [unitSortDirection, setUnitSortDirection] = useState<SortDirection>('desc');
+    const [unitSortKey, setUnitSortKey] = useState<UnitSortKey>('balance');
+    const [unitSortDirection, setUnitSortDirection] = useState<SortDirection>('asc');
     const [unitSearchQuery, setUnitSearchQuery] = useState('');
     const [columnVisibility] = useLocalStorage<UnitColumnVisibility>('unit-column-visibility', defaultColumnVisibility);
-
+    const [quarterRange, setQuarterRange] = useState<QuarterRangeOption>('all_since_start');
 
     // State for common UI
     const [validationError, setValidationError] = useState<{ title: string, description: string} | null>(null);
@@ -167,42 +168,30 @@ export default function BuildingPage() {
     }, [firestore, buildingId]);
     const { data: payments } = useCollection(paymentsQuery);
 
-    const paymentsByUnit = useMemo(() => {
-        if (!payments) return new Map<string, number>();
-        const unitPayments = new Map<string, number>();
-        for (const payment of payments) {
-            const total = unitPayments.get(payment.unitId) || 0;
-            unitPayments.set(payment.unitId, total + payment.amount);
-        }
-        return unitPayments;
-    }, [payments]);
+    const financialDataByUnit = useMemo(() => {
+        const results = new Map<string, { totalDue: number; totalPaid: number; balance: number }>();
+        if (!units || !building || !building.financialStartDate) return results;
 
-    const balancesByUnit = useMemo(() => {
-        if (!units || !building || !building.financialStartDate) return new Map<string, number>();
-        
-        const balances = new Map<string, number>();
         const financialStartDate = building.financialStartDate?.toDate();
+        if (!financialStartDate) return results;
 
-        if (!financialStartDate) return balances;
+        const quarterStringsInRange = getQuartersForRange(financialStartDate, quarterRange);
 
         units.forEach(unit => {
-            const unitCreationDate = unit.createdAt?.toDate();
-
-            // A unit balance calculation should not start before the building's financial start date OR the unit's creation date.
-            const calculationStartDate = (unitCreationDate && unitCreationDate > financialStartDate) 
-                ? unitCreationDate 
-                : financialStartDate;
-
-            const quartersDueCount = getQuartersSince(calculationStartDate);
+            const totalDue = (unit.quarterlyMaintenanceFees || 0) * quarterStringsInRange.length;
             
-            const totalDue = quartersDueCount * (unit.quarterlyMaintenanceFees || 0);
-            const totalPaid = paymentsByUnit.get(unit.id) || 0;
+            const totalPaid = (payments || [])
+                .filter(p => p.unitId === unit.id && quarterStringsInRange.includes(p.quarter))
+                .reduce((sum, p) => sum + p.amount, 0);
+
+            const balance = totalPaid - totalDue;
             
-            balances.set(unit.id, totalPaid - totalDue);
+            results.set(unit.id, { totalDue, totalPaid, balance });
         });
 
-        return balances;
-    }, [units, paymentsByUnit, building]);
+        return results;
+
+    }, [units, payments, building, quarterRange]);
 
 
     const unitCountsByLevel = useMemo(() => {
@@ -308,19 +297,19 @@ export default function BuildingPage() {
                     const levelNameA = levelsMap.get(a.levelId) || '';
                     const levelNameB = levelsMap.get(b.levelId) || '';
                     return levelNameA.localeCompare(levelNameB) * dir;
-                case 'balanceDue':
-                    const balanceA = balancesByUnit.get(a.id) || 0;
-                    const balanceB = balancesByUnit.get(b.id) || 0;
+                case 'balance':
+                    const balanceA = financialDataByUnit.get(a.id)?.balance || 0;
+                    const balanceB = financialDataByUnit.get(b.id)?.balance || 0;
                     return (balanceA - balanceB) * dir;
                 default:
                     return 0;
             }
         });
-    }, [units, unitSortKey, unitSortDirection, levelsMap, unitSearchQuery, balancesByUnit]);
+    }, [units, unitSortKey, unitSortDirection, levelsMap, unitSearchQuery, financialDataByUnit]);
 
     const unitTableColSpan = useMemo(() => {
         return (
-            3 + // Unit #, Balance, and Actions are always visible
+            5 + // Unit #, Due, Paid, Balance, Actions are always visible
             (columnVisibility.type ? 1 : 0) +
             (columnVisibility.level ? 1 : 0) +
             (columnVisibility.owner ? 1 : 0)
@@ -575,6 +564,8 @@ export default function BuildingPage() {
         )
     }
 
+    const currentQuarter = getCurrentQuarter();
+
     return (
         <main className="w-full space-y-4">
             <div className="mb-2">
@@ -773,6 +764,19 @@ export default function BuildingPage() {
                                     />
                                 </div>
                             </div>
+                            <div className="flex items-center gap-4 pt-4">
+                                <span className="text-sm font-medium">Current Quarter: <span className="font-semibold">{formatQuarter(currentQuarter)}</span></span>
+                                <Select onValueChange={(value) => setQuarterRange(value as QuarterRangeOption)} value={quarterRange}>
+                                    <SelectTrigger className="w-[200px]">
+                                        <SelectValue placeholder="Select Range" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="current_quarter">Current Quarter</SelectItem>
+                                        <SelectItem value="year_to_date">Year to Date</SelectItem>
+                                        <SelectItem value="all_since_start">All (Since Start)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </CardHeader>
                         <CardContent>
                              <div className="border rounded-lg">
@@ -809,10 +813,12 @@ export default function BuildingPage() {
                                                     </Button>
                                                 </TableHead>
                                             )}
+                                            <TableHead>Total Due</TableHead>
+                                            <TableHead>Total Paid</TableHead>
                                             <TableHead>
-                                                 <Button variant="ghost" onClick={() => handleUnitSort('balanceDue')} className="px-0">
-                                                    Balance Due
-                                                    {renderSortIcon('balanceDue', true)}
+                                                 <Button variant="ghost" onClick={() => handleUnitSort('balance')} className="px-0">
+                                                    Balance
+                                                    {renderSortIcon('balance', true)}
                                                 </Button>
                                             </TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
@@ -820,15 +826,21 @@ export default function BuildingPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {sortedAndFilteredUnits && sortedAndFilteredUnits.length > 0 ? sortedAndFilteredUnits.map((unit) => {
-                                            const balance = balancesByUnit.get(unit.id) || 0;
+                                            const financials = financialDataByUnit.get(unit.id) || { totalDue: 0, totalPaid: 0, balance: 0 };
                                             return (
                                                 <TableRow key={unit.id}>
                                                     <TableCell className="font-semibold">{unit.unitNumber}</TableCell>
                                                     {columnVisibility.type && <TableCell>{unit.type}</TableCell>}
                                                     {columnVisibility.level && <TableCell>{levelsMap.get(unit.levelId) || 'N/A'}</TableCell>}
                                                     {columnVisibility.owner && <TableCell>{unit.ownerName}</TableCell>}
-                                                    <TableCell className={balance < 0 ? 'text-destructive' : ''}>
-                                                        {balance.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
+                                                     <TableCell>
+                                                        {financials.totalDue.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {financials.totalPaid.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
+                                                    </TableCell>
+                                                    <TableCell className={financials.balance < 0 ? 'text-destructive' : ''}>
+                                                        {financials.balance.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex gap-2 justify-end">
@@ -860,7 +872,7 @@ export default function BuildingPage() {
                                         }) : (
                                             <TableRow>
                                                 <TableCell colSpan={unitTableColSpan} className="text-center h-24">
-                                                    {unitSearchQuery ? `No units found for "${unitSearchQuery}".` : "No units found in this building."}
+                                                    {unitSearchQuery ? `No units found for "${unitSearchQuery}".` : (building?.financialStartDate ? "No units found in this building." : "Set a Financial Start Date for the building to see unit balances.")}
                                                 </TableCell>
                                             </TableRow>
                                         )}
