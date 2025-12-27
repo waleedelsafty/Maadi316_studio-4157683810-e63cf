@@ -18,7 +18,6 @@ import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LevelFormSheet } from '@/components/level-form-sheet';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -123,7 +122,6 @@ export default function BuildingPage() {
     const [levelName, setLevelName] = useState('');
     const [levelType, setLevelType] = useState<Level['type'] | ''>('');
     const [floorNumber, setFloorNumber] = useState<number | ''>('');
-    const [editingLevel, setEditingLevel] = useState<Level | null>(null);
 
     // State for Sorting and Filtering
     const [sortKey, setSortKey] = useState<SortKey>('type');
@@ -135,7 +133,6 @@ export default function BuildingPage() {
 
 
     // State for common UI
-    const [isLevelSheetOpen, setIsLevelSheetOpen] = useState(false);
     const [validationError, setValidationError] = useState<{ title: string, description: string} | null>(null);
     
     // Firestore Hooks
@@ -449,11 +446,6 @@ export default function BuildingPage() {
         })
     }
     
-    const handleLevelSheetOpenChange = (isOpen: boolean) => {
-        setIsLevelSheetOpen(isOpen);
-        if (!isOpen) setEditingLevel(null);
-    }
-
     const checkDataForExport = () => {
         if (!building || !levels || !units) {
             toast({ variant: 'destructive', title: 'Could not export', description: 'Data is not fully loaded yet.' });
@@ -890,10 +882,6 @@ export default function BuildingPage() {
                      </AlertDialog>
                 </CardContent>
             </Card>
-
-            {editingLevel && (
-                <LevelFormSheet level={editingLevel} buildingId={buildingId} isOpen={isLevelSheetOpen} onOpenChange={handleLevelSheetOpenChange} existingLevels={levels || []} />
-            )}
 
             <AlertDialog open={!!validationError} onOpenChange={() => setValidationError(null)}>
                 <AlertDialogContent>
