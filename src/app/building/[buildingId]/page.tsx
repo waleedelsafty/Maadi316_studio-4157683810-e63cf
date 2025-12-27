@@ -244,7 +244,7 @@ export default function BuildingPage() {
             
             switch (unitSortKey) {
                 case 'unitNumber':
-                    return (a.unitNumber || '').localeCompare(b.unitNumber || '', undefined, { numeric: true }) * dir;
+                    return String(a.unitNumber || '').localeCompare(String(b.unitNumber || ''), undefined, { numeric: true }) * dir;
                 case 'type':
                     return (a.type || '').localeCompare(b.type || '') * dir;
                 case 'ownerName':
