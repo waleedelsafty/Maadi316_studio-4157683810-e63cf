@@ -273,6 +273,15 @@ export default function BuildingPage() {
         });
     }, [units, unitSortKey, unitSortDirection, levelsMap, unitSearchQuery]);
 
+    const unitTableColSpan = useMemo(() => {
+        return (
+            2 + // Unit # and Actions are always visible
+            (columnVisibility.type ? 1 : 0) +
+            (columnVisibility.level ? 1 : 0) +
+            (columnVisibility.owner ? 1 : 0)
+        );
+    }, [columnVisibility]);
+
     const handleSort = (key: SortKey) => {
         if (sortKey === key) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -788,7 +797,7 @@ export default function BuildingPage() {
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center h-24">
+                                                <TableCell colSpan={unitTableColSpan} className="text-center h-24">
                                                     {unitSearchQuery ? `No units found for "${unitSearchQuery}".` : "No units found in this building."}
                                                 </TableCell>
                                             </TableRow>
