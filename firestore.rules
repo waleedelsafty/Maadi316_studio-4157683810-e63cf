@@ -36,6 +36,11 @@ service cloud.firestore {
       match /units/{unitId} {
         allow read, write: if isOwner(get(/databases/$(database)/documents/buildings/$(buildingId)).data.ownerId);
       }
+
+      // Payments can be read and written by the owner of the parent building
+      match /payments/{paymentId} {
+        allow read, write: if isOwner(get(/databases/$(database)/documents/buildings/$(buildingId)).data.ownerId);
+      }
     }
   }
 }

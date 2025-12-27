@@ -34,3 +34,15 @@ export type Unit = {
     type: 'Office' | 'Commercial' | 'Flat Apartment' | 'Duplex Apartment' | 'Storage';
     createdAt: any; // Firestore Timestamp
 };
+
+export type Payment = {
+    id: string;
+    unitId: string;
+    amount: number;
+    paymentDate: any; // Firestore Timestamp
+    quarter: string; // e.g., "Q1 2024"
+    paymentType: 'Cash' | 'Bank Transfer' | 'Instapay Transfer';
+    receiptUrl?: string;
+    notes?: string;
+    createdAt: any; // Firestore Timestamp
+};

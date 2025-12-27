@@ -60,8 +60,11 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         if (pathname.includes('/level/')) {
             return 'Level Details';
         }
-        if (pathname.includes('/unit/')) {
+        if (pathname.includes('/unit/') && pathname.includes('/edit')) {
             return 'Edit Unit';
+        }
+        if (pathname.includes('/unit/') && pathname.includes('/payments')) {
+            return 'Payment History';
         }
         return 'Building Details';
     }
@@ -153,7 +156,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
             </div>
             <ThemeToggle />
         </header>
-        <div className="p-4 sm:p-6">
+        <div className="p-2 sm:p-4">
             {children}
         </div>
         </SidebarInset>

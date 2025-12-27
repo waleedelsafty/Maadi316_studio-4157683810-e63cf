@@ -165,6 +165,50 @@
         }
       },
       "required": ["unitNumber", "levelId", "type", "createdAt"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Represents a maintenance fee payment for a unit.",
+      "type": "object",
+      "properties": {
+        "unitId": {
+          "type": "string",
+          "description": "The ID of the unit this payment is for."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount paid."
+        },
+        "paymentDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the payment was received."
+        },
+        "quarter": {
+          "type": "string",
+          "description": "The quarter this payment covers (e.g., 'Q1 2024')."
+        },
+        "paymentType": {
+          "type": "string",
+          "description": "The method of payment.",
+          "enum": ["Cash", "Bank Transfer", "Instapay Transfer"]
+        },
+        "receiptUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL to the payment receipt image or PDF."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes about the payment."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the payment was recorded."
+        }
+      },
+      "required": ["unitId", "amount", "paymentDate", "quarter", "paymentType", "createdAt"]
     }
   },
   "auth": {
@@ -200,6 +244,12 @@
         "$ref": "#/backend/entities/Unit"
       },
       "description": "Stores the units within a specific building."
+    },
+    "/buildings/{buildingId}/payments/{paymentId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Payment"
+      },
+      "description": "Stores the maintenance payments for all units in a building."
     }
   }
 }

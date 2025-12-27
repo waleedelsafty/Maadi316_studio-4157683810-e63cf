@@ -17,8 +17,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, History } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 const unitTypes: Unit['type'][] = ['Office', 'Commercial', 'Flat Apartment', 'Duplex Apartment', 'Storage'];
 
@@ -105,7 +106,7 @@ export default function EditUnitPage() {
 
 
   return (
-    <main className="w-full max-w-2xl mx-auto">
+    <main className="w-full max-w-2xl">
         <div className="mb-4">
              <Button variant="ghost" onClick={handleCancel} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pl-0">
                 <ArrowLeft className="h-4 w-4" /> Back to Level
@@ -115,10 +116,20 @@ export default function EditUnitPage() {
         <form onSubmit={handleSubmit(onSubmit)}>
             <Card>
                 <CardHeader>
-                    <CardTitle>Edit Unit</CardTitle>
-                    <CardDescription>
-                        Make changes to unit details. Click save when you're done.
-                    </CardDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Edit Unit</CardTitle>
+                            <CardDescription>
+                                Make changes to unit details. Click save when you're done.
+                            </CardDescription>
+                        </div>
+                        <Button variant="outline" asChild>
+                            <Link href={`/building/${buildingId}/unit/${unitId}/payments`}>
+                                <History className="mr-2 h-4 w-4" />
+                                View Payments
+                            </Link>
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="grid gap-4 py-6">
                     {!unit ? (
