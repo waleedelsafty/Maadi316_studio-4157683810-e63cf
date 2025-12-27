@@ -348,21 +348,6 @@ export default function BuildingDashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="border-destructive">
-                <CardHeader className="p-4">
-                    <CardTitle>Danger Zone</CardTitle>
-                    <CardDescription>This action is irreversible. Once deleted, the building will be moved to the recycle bin.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-4">
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" disabled={!building}><Trash2 className="mr-2" /> Delete Building</Button>
-                        </AlertDialogTrigger>
-                         {building && <SoftDeleteDialog onConfirm={handleSoftDelete} buildingName={buildingName} />}
-                     </AlertDialog>
-                </CardContent>
-            </Card>
-
             <AlertDialog open={!!validationError} onOpenChange={() => setValidationError(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
