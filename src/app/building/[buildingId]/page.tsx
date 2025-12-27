@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -244,8 +245,8 @@ export default function BuildingPage() {
         if (!comboboxSearch) return units;
         const lowerQuery = comboboxSearch.toLowerCase();
         return units.filter(u => 
-            u.unitNumber.toLowerCase().includes(lowerQuery) || 
-            u.ownerName.toLowerCase().includes(lowerQuery)
+            String(u.unitNumber).toLowerCase().includes(lowerQuery) || 
+            String(u.ownerName).toLowerCase().includes(lowerQuery)
         );
     }, [units, comboboxSearch]);
 
