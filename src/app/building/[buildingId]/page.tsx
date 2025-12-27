@@ -29,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { defaultColumnVisibility, type UnitColumnVisibility } from '@/app/settings/display/page';
 import { getQuartersForRange, formatQuarter, getCurrentQuarter } from '@/lib/calculations';
-import { format } from 'date-fns';
+import { format, addQuarters, getYear, getQuarter, isBefore, startOfQuarter } from 'date-fns';
 import { useForm, Controller } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -121,18 +121,6 @@ type QuarterRangeOption = 'current_quarter' | 'year_to_date' | 'all_since_start'
 
 const paymentTypes: Payment['paymentType'][] = ['Cash', 'Bank Transfer', 'Instapay Transfer'];
 
-const generateQuarterOptions = () => {
-    const options = [];
-    const currentYear = new Date().getFullYear();
-    for (let year = currentYear + 1; year >= currentYear - 5; year--) {
-        for (let q = 4; q >= 1; q--) {
-            options.push(`Q${q} ${year}`);
-        }
-    }
-    return options;
-};
-const quarterOptions = generateQuarterOptions();
-
 const paymentFormSchema = z.object({
   unitId: z.string().min(1, "Please select a unit."),
   quarter: z.string().min(1, 'Quarter is required'),
@@ -214,6 +202,24 @@ export default function BuildingPage() {
     }, [firestore, buildingId]);
     const { data: payments } = useCollection(paymentsQuery);
 
+     const quarterOptions = useMemo(() => {
+        if (!building?.financialStartDate) {
+            return [];
+        }
+        const options: string[] = [];
+        const startDate = building.financialStartDate.toDate();
+        const futureDate = addQuarters(new Date(), 2);
+        
+        let current = startOfQuarter(startDate);
+
+        while (isBefore(current, futureDate)) {
+            options.push(`Q${getQuarter(current)} ${getYear(current)}`);
+            current = addQuarters(current, 1);
+        }
+        return options.reverse();
+     }, [building]);
+
+
     const filteredPayments = useMemo(() => {
         if (!payments) return [];
         return payments.filter(p => {
@@ -222,8 +228,8 @@ export default function BuildingPage() {
             const quarterMatch = !paymentFilter.quarter || p.quarter === paymentFilter.quarter;
             const textMatch = !queryLower || 
                 p.notes?.toLowerCase().includes(queryLower) ||
-                unit?.unitNumber.toLowerCase().includes(queryLower) ||
-                unit?.ownerName.toLowerCase().includes(queryLower);
+                String(unit?.unitNumber).toLowerCase().includes(queryLower) ||
+                String(unit?.ownerName).toLowerCase().includes(queryLower);
             return quarterMatch && textMatch;
         });
     }, [payments, unitsMap, paymentFilter]);
@@ -239,6 +245,13 @@ export default function BuildingPage() {
             receiptUrl: '',
         }
     });
+
+    useEffect(() => {
+        if (quarterOptions.length > 0 && !paymentForm.getValues('quarter')) {
+            paymentForm.setValue('quarter', quarterOptions[0]);
+        }
+    }, [quarterOptions, paymentForm]);
+
 
     const comboboxFilteredUnits = useMemo(() => {
         if (!units) return [];
@@ -277,7 +290,12 @@ export default function BuildingPage() {
               title: 'Payment Recorded',
               description: `Payment for ${data.quarter} has been successfully recorded.`,
             });
-            paymentForm.reset();
+            paymentForm.reset({
+                quarter: quarterOptions[0],
+                paymentType: 'Cash',
+                notes: '',
+                receiptUrl: '',
+            });
             setIsAddingPayment(false);
             setSelectedUnit(null);
             setComboboxSearch("");
@@ -1246,3 +1264,5 @@ export default function BuildingPage() {
         </main>
     );
 }
+
+    
