@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -58,6 +57,9 @@ export function MainNav({ children }: { children: React.ReactNode }) {
   const getPageTitle = () => {
     if (pathname === '/') return 'Dashboard';
     if (pathname.startsWith('/building/')) {
+        if (pathname.endsWith('/edit')) {
+            return 'Edit Building';
+        }
         if (pathname.includes('/level/')) {
             return 'Level Details';
         }
@@ -69,6 +71,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
         }
         return 'Building Details';
     }
+    if (pathname === '/buildings/new') return 'Add New Building';
     if (pathname === '/buildings') return 'My Buildings';
     if (pathname.startsWith('/settings')) return 'Settings';
     return 'Dashboard';
@@ -112,7 +115,7 @@ export function MainNav({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
-                  isActive={pathname === '/buildings'}
+                  isActive={pathname === '/buildings' || pathname === '/buildings/new'}
                   tooltip="My Buildings"
                 >
                     <Link href="/buildings">
@@ -164,7 +167,3 @@ export function MainNav({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
-    
-
-    

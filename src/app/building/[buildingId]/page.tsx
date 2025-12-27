@@ -16,7 +16,6 @@ import type { Building, Level, Unit, Payment } from '@/types';
 import { ArrowLeft, ArrowUp, ArrowDown, Edit, Download, ChevronDown, ChevronsUpDown, Trash2, DollarSign, Search } from 'lucide-react';
 import Link from 'next/link';
 import { InlineEditField } from '@/components/inline-edit-field';
-import { BuildingFormSheet } from '@/components/building-form-sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LevelFormSheet } from '@/components/level-form-sheet';
@@ -136,7 +135,6 @@ export default function BuildingPage() {
 
 
     // State for common UI
-    const [isBuildingSheetOpen, setIsBuildingSheetOpen] = useState(false);
     const [isLevelSheetOpen, setIsLevelSheetOpen] = useState(false);
     const [validationError, setValidationError] = useState<{ title: string, description: string} | null>(null);
     
@@ -605,8 +603,10 @@ export default function BuildingPage() {
                                     <DropdownMenuItem onClick={handleExportJson}>Export as JSON (.json)</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                            <Button variant="outline" size="sm" onClick={() => setIsBuildingSheetOpen(true)}>
-                                <Edit className="mr-2 h-4 w-4" /> Edit Building
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={`/building/${buildingId}/edit`}>
+                                    <Edit className="mr-2 h-4 w-4" /> Edit Building
+                                </Link>
                             </Button>
                         </div>
                     </div>
@@ -890,9 +890,6 @@ export default function BuildingPage() {
                      </AlertDialog>
                 </CardContent>
             </Card>
-
-
-            <BuildingFormSheet building={building} isOpen={isBuildingSheetOpen} onOpenChange={setIsBuildingSheetOpen} />
 
             {editingLevel && (
                 <LevelFormSheet level={editingLevel} buildingId={buildingId} isOpen={isLevelSheetOpen} onOpenChange={handleLevelSheetOpenChange} existingLevels={levels || []} />

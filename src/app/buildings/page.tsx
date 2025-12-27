@@ -11,7 +11,6 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { BuildingFormSheet } from '@/components/building-form-sheet';
 import type { Building, Level } from '@/types';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -165,7 +164,6 @@ function BuildingRow({ building }: { building: Building }) {
 export default function BuildingsPage() {
   const user = useUser();
   const firestore = useFirestore();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const buildingsQuery = useMemo(() => {
     if (!user || !firestore) return null;
@@ -185,14 +183,6 @@ export default function BuildingsPage() {
     return null; // Or a loading spinner
   }
 
-  const handleOpenSheet = () => {
-    setIsSheetOpen(true);
-  }
-
-  const handleSheetOpenChange = (isOpen: boolean) => {
-    setIsSheetOpen(isOpen);
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -202,7 +192,9 @@ export default function BuildingsPage() {
         </div>
         <div className="flex gap-2">
             <ImportBuildingButton existingBuildings={buildings || []} />
-            <Button onClick={handleOpenSheet}>Add Building</Button>
+            <Button asChild>
+              <Link href="/buildings/new">Add Building</Link>
+            </Button>
         </div>
       </div>
       
@@ -256,12 +248,6 @@ export default function BuildingsPage() {
           </div>
         ) : null}
       </div>
-
-      <BuildingFormSheet
-          building={null}
-          isOpen={isSheetOpen}
-          onOpenChange={handleSheetOpenChange}
-      />
     </div>
   );
 }
