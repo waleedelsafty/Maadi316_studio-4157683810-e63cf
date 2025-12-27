@@ -98,6 +98,11 @@
         "isDeleted": {
           "type": "boolean",
           "description": "A flag to indicate if the building has been soft-deleted."
+        },
+        "financialStartDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date from which to start calculating financial balances for all units in this building."
         }
       },
       "required": ["Building_name", "address", "ownerId", "createdAt"]

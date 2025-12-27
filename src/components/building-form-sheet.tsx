@@ -18,13 +18,18 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useFirestore, useUser } from '@/firebase';
-import { doc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { Building } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar } from './ui/calendar';
 
 const formSchema = z.object({
   Building_name: z.string().min(1, 'Building name is required'),
@@ -35,6 +40,7 @@ const formSchema = z.object({
   mezzanineCount: z.number().optional(),
   hasPenthouse: z.boolean().default(false),
   hasRooftop: z.boolean().default(false),
+  financialStartDate: z.date().optional(),
 });
 
 type BuildingFormSheetProps = {
@@ -56,7 +62,7 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
     reset,
     control,
     watch
-  } = useForm({
+  } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       Building_name: '',
@@ -76,10 +82,11 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     if (!firestore || !user) return;
 
-    const submissionData = {
+    const submissionData: any = {
         ...data,
         basementCount: data.hasBasement ? data.basementCount : 0,
         mezzanineCount: data.hasMezzanine ? data.mezzanineCount : 0,
+        financialStartDate: data.financialStartDate ? Timestamp.fromDate(data.financialStartDate) : null
     };
 
     if (isEditing) {
@@ -138,13 +145,14 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
         mezzanineCount: building?.mezzanineCount || 1,
         hasPenthouse: building?.hasPenthouse || false,
         hasRooftop: building?.hasRooftop || false,
+        financialStartDate: building?.financialStartDate?.toDate() || undefined,
       });
     }
   }, [isOpen, building, reset]);
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[525px]">
+      <SheetContent className="sm:max-w-[525px] overflow-y-auto">
         <form onSubmit={handleSubmit(onSubmit)}>
           <SheetHeader>
             <SheetTitle>{isEditing ? 'Edit Building' : 'Add New Building'}</SheetTitle>
@@ -162,6 +170,29 @@ export function BuildingFormSheet({ building, isOpen, onOpenChange }: BuildingFo
                 <Label htmlFor="address">Address</Label>
                 <Input id="address" {...register('address')} placeholder="e.g., '123 Main St, Anytown, USA'"/>
                 {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address.message as string}</p>}
+              </div>
+              
+              <div>
+                <Label htmlFor="financialStartDate">Financial Start Date</Label>
+                 <Controller
+                    name="financialStartDate"
+                    control={control}
+                    render={({ field }) => (
+                       <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                        </Popover>
+                    )}
+                />
+                 {errors.financialStartDate && <p className="text-red-500 text-xs mt-1">{errors.financialStartDate.message as string}</p>}
+                 <p className="text-xs text-muted-foreground mt-1">Date to start calculating financial balances for all units.</p>
               </div>
 
               <div className="space-y-4">

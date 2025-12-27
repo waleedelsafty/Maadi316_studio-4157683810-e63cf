@@ -1,4 +1,5 @@
 
+
 export type Building = {
     id: string;
     Building_name: string;
@@ -14,6 +15,7 @@ export type Building = {
     hasPenthouse?: boolean;
     hasRooftop?: boolean;
     isDeleted?: boolean;
+    financialStartDate?: any; // Firestore Timestamp
 };
 
 export type Level = {
