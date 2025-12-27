@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { defaultColumnVisibility, type UnitColumnVisibility } from '@/app/settings/display/page';
 import { getQuartersSince } from '@/lib/calculations';
+import { format } from 'date-fns';
 
 
 const levelTypes: Level['type'][] = ['Basement', 'Ground', 'Mezzanine', 'Typical Floor', 'Penthouse', 'Rooftop'];
@@ -616,6 +617,14 @@ export default function BuildingPage() {
                            <div className="space-y-2">
                                 <InlineEditField label="Building Name" value={buildingName} onSave={(value) => handleUpdateBuilding('Building_name', value)} />
                                 <InlineEditField label="Address" value={building.address} onSave={(value) => handleUpdateBuilding('address', value)} />
+                                 {building.financialStartDate && (
+                                    <div className="flex items-center justify-between min-h-[40px] border-b">
+                                        <label className="text-sm font-medium text-muted-foreground w-1/3">Financial Start Date</label>
+                                        <div className="w-2/3 text-right">
+                                            <p className="text-sm font-semibold">{format(building.financialStartDate.toDate(), 'PPP')}</p>
+                                        </div>
+                                    </div>
+                                )}
                            </div>
                             <div className="space-y-2 pt-2">
                                 <h4 className="font-medium text-sm">Building Structure</h4>
