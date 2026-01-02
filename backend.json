@@ -1,0 +1,672 @@
+
+{
+  "projectId": "studio-4157683810-e63cf",
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Represents a user's profile information.",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's profile picture."
+        },
+        "defaultBuildingId": {
+          "type": "string",
+          "description": "The ID of the user's default/active building."
+        }
+      },
+      "required": ["displayName", "email"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "A single note created by a user.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The content of the note."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the note was created."
+        }
+      },
+      "required": ["text", "createdAt"]
+    },
+    "GlobalUnitType": {
+      "title": "Global Unit Type",
+      "description": "Defines a single, globally available unit type.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The unique name of the unit type (e.g., 'Townhouse')."
+        },
+        "shortName": {
+          "type": "string",
+          "description": "An optional short name or code (e.g., 'TH')."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional description of the unit type."
+        },
+        "isMultiLevel": {
+          "type": "boolean",
+          "description": "If true, this unit type can span multiple building levels."
+        }
+      },
+      "required": ["name", "isMultiLevel"]
+    },
+    "GlobalUtilityType": {
+        "title": "Global Utility Type",
+        "description": "Defines a single, globally available utility expense type.",
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The unique name of the utility type (e.g., 'Electricity', 'Internet')."
+            },
+            "description": {
+                "type": "string",
+                "description": "An optional description of the utility type."
+            }
+        },
+        "required": ["name"]
+    },
+    "GlobalPayableCategory": {
+        "title": "Global Payable Category",
+        "description": "Defines a single, globally available category for payables (expenses).",
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The unique name of the category (e.g., 'Salaries', 'Repairs')."
+            },
+            "description": {
+                "type": "string",
+                "description": "An optional description of the category."
+            },
+            "linksTo": {
+                "type": ["string", "null"],
+                "description": "Defines if this category has special linking behavior.",
+                "enum": ["employee", "serviceProvider", "utility", null]
+            }
+        },
+        "required": ["name"]
+    },
+    "GlobalPaymentMethod": {
+        "title": "Global Payment Method",
+        "description": "Defines a single, globally available payment method type.",
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The unique name of the payment method (e.g., 'Credit Card', 'PayPal')."
+            },
+            "description": {
+                "type": "string",
+                "description": "An optional description of the payment method."
+            },
+            "icon": {
+                "type": "string",
+                "description": "An optional icon identifier for the payment method (e.g., a lucide-react icon name)."
+            }
+        },
+        "required": ["name"]
+    },
+    "AppSettings": {
+        "title": "App Settings",
+        "description": "A singleton document to hold global application settings.",
+        "type": "object",
+        "properties": {
+            "globalUnitTypes": {
+                "type": "array",
+                "description": "A global list of all possible unit types available in the application.",
+                "items": {
+                    "$ref": "#/backend/entities/GlobalUnitType"
+                }
+            }
+        }
+    },
+    "Building": {
+      "title": "Building",
+      "description": "Represents a building created by a super admin.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the building."
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical address of the building."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who owns the building."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the building was created."
+        },
+        "floors": {
+          "type": "number",
+          "description": "The total number of floors in the building."
+        },
+        "units": {
+          "type": "number",
+          "description": "The total number of units in the building."
+        },
+        "hasBasement": {
+          "type": "boolean",
+          "description": "Indicates if the building has a basement."
+        },
+        "basementCount": {
+          "type": "number",
+          "description": "The number of basement levels (1-3)."
+        },
+        "hasMezzanine": {
+          "type": "boolean",
+          "description": "Indicates if the building has a mezzanine."
+        },
+        "mezzanineCount": {
+          "type": "number",
+          "description": "The number of mezzanine levels (1-4)."
+        },
+        "hasPenthouse": {
+          "type": "boolean",
+          "description": "Indicates if the building has a penthouse level."
+        },
+        "hasRooftop": {
+          "type": "boolean",
+          "description": "Indicates if the building has a usable rooftop level."
+        },
+        "isDeleted": {
+          "type": "boolean",
+          "description": "A flag to indicate if the building has been soft-deleted."
+        },
+        "financialStartDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date from which to start calculating financial balances for all units in this building."
+        },
+        "enabledUnitTypeIds": {
+            "type": "array",
+            "description": "A list of globally-defined unit type IDs that are enabled for this specific building.",
+            "items": {
+                "type": "string"
+            }
+        }
+      },
+      "required": ["name", "address", "ownerId", "createdAt"]
+    },
+    "Level": {
+      "title": "Level",
+      "description": "Represents a floor or level within a building.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The custom name of the level (e.g., 'Lobby', 'Parking 1')."
+        },
+        "levelType": {
+          "type": "string",
+          "description": "The type of the level.",
+          "enum": ["Basement", "Ground", "Mezzanine", "Typical Floor", "Penthouse", "Rooftop"]
+        },
+        "floorNumber": {
+          "type": "number",
+          "description": "The designated number for the floor, used for 'Typical Floor' type."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the level was created."
+        }
+      },
+      "required": ["name", "levelType", "createdAt"]
+    },
+    "Unit": {
+      "title": "Unit",
+      "description": "Represents a single unit within a building.",
+      "type": "object",
+      "properties": {
+        "unitNumber": {
+          "type": "string",
+          "description": "The number or identifier for the unit."
+        },
+        "levelId": {
+          "type": "string",
+          "description": "The ID of the level this unit is on."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The ID of the owner of this unit. Only present on parent units."
+        },
+        "sqm": {
+          "type": "number",
+          "description": "The size of the unit in square meters."
+        },
+        "quarterlyMaintenanceFees": {
+          "type": "number",
+          "description": "The quarterly maintenance fees for the unit. Only present on parent units."
+        },
+        "unitTypeId": {
+          "type": "string",
+          "description": "The ID of the global unit type."
+        },
+        "parentUnitId": {
+            "type": "string",
+            "description": "If this is a child unit (part of a multi-level unit), this links to the parent unit's ID."
+        },
+        "childUnitIds": {
+            "type": "array",
+            "description": "If this is a parent unit, this lists the IDs of its child units on other levels.",
+            "items": { "type": "string" }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the unit was created."
+        }
+      },
+      "required": ["unitNumber", "levelId", "unitTypeId", "createdAt"]
+    },
+    "Owner": {
+      "title": "Owner",
+      "description": "Represents a unit owner in a building.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The full name of the owner or company name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The owner's email address."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The owner's phone number."
+        },
+        "contactPerson": {
+          "type": "string",
+          "description": "Primary contact person if the owner is a company."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the owner was added."
+        }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Represents a maintenance fee payment for a unit (a receivable).",
+      "type": "object",
+      "properties": {
+        "unitId": {
+          "type": "string",
+          "description": "The ID of the unit this payment is for."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount paid."
+        },
+        "paymentDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the payment was received."
+        },
+        "quarter": {
+          "type": "string",
+          "description": "The quarter this payment covers (e.g., 'Q1 2024')."
+        },
+        "paymentType": {
+          "type": "string",
+          "description": "The method of payment.",
+          "enum": ["Cash", "Bank Transfer", "Instapay Transfer"]
+        },
+        "receiptUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL to the payment receipt image or PDF."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes about the payment."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the payment was recorded."
+        }
+      },
+      "required": ["unitId", "amount", "paymentDate", "quarter", "paymentType", "createdAt"]
+    },
+    "Payable": {
+      "title": "Payable",
+      "description": "Represents an expense or outgoing payment for the building.",
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "A brief description of the expense."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount paid."
+        },
+        "expenseDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the expense was paid."
+        },
+        "categoryTypeId": {
+          "type": "string",
+          "description": "The ID of the global payable category for the expense."
+        },
+        "utilityTypeId": {
+            "type": ["string", "null"],
+            "description": "The ID of the global utility type, if category is 'Utilities'."
+        },
+        "vendor": {
+          "type": "string",
+          "description": "The vendor or person who was paid."
+        },
+        "receiptUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL to the payment receipt image or PDF."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes about the expense."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the expense was recorded."
+        },
+        "employeeId": {
+          "type": ["string", "null"],
+          "description": "Link to employee if category is 'Salary'."
+        },
+        "serviceProviderId": {
+          "type": ["string", "null"],
+          "description": "Link to service provider if category is 'Contractual Maintenance'."
+        }
+      },
+      "required": ["description", "amount", "expenseDate", "categoryTypeId", "createdAt"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Represents a building employee.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The full name of the employee."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The employee's phone number."
+        },
+        "idNumber": {
+          "type": "string",
+          "description": "The employee's national or company ID number."
+        },
+        "photoUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the employee's picture."
+        },
+        "hireDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the employee was hired."
+        },
+        "jobTitle": {
+          "type": "string",
+          "description": "The employee's job title.",
+          "enum": [
+            "Security",
+            "Doorman",
+            "Concierge",
+            "Gardner"
+          ]
+        },
+        "jobDescription": {
+          "type": "string",
+          "description": "A description of the employee's responsibilities."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the employee record was created."
+        }
+      },
+      "required": ["name", "idNumber", "hireDate", "jobTitle", "createdAt"]
+    },
+    "SalaryHistory": {
+      "title": "Salary History",
+      "description": "Represents a single salary adjustment for an employee.",
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "number",
+          "description": "The new salary amount."
+        },
+        "effectiveDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date from which this new salary is effective."
+        },
+        "changeReason": {
+          "type": "string",
+          "description": "Optional reason for the salary change (e.g., 'Annual raise', 'Promotion')."
+        }
+      },
+      "required": ["amount", "effectiveDate"]
+    },
+    "ServiceProvider": {
+      "title": "Service Provider",
+      "description": "Represents a vendor or service provider for the building.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the service provider."
+        },
+        "serviceType": {
+          "type": "string",
+          "description": "The type of service provided.",
+          "enum": ["Plumbing", "Electrical", "HVAC", "Cleaning", "Security", "Landscaping", "Pest Control", "Other"]
+        },
+        "contactPerson": {
+          "type": "string",
+          "description": "The primary contact person's name."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The provider's phone number."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The provider's email address."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes about the provider."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the provider was added."
+        },
+        "hasMonthlyPayment": {
+          "type": "boolean",
+          "description": "Indicates if the provider has a recurring monthly payment."
+        },
+        "monthlyPaymentAmount": {
+          "type": ["number", "null"],
+          "description": "The fixed monthly payment amount."
+        }
+      },
+      "required": ["name", "serviceType", "createdAt"]
+    },
+    "ContractPaymentHistory": {
+        "title": "Contract Payment History",
+        "description": "Represents a single payment adjustment for a contractual service provider.",
+        "type": "object",
+        "properties": {
+            "amount": { "type": "number", "description": "The new payment amount." },
+            "effectiveDate": { "type": "string", "format": "date-time", "description": "The date from which this new payment is effective." },
+            "changeReason": { "type": "string", "description": "Optional reason for the change." }
+        },
+        "required": ["amount", "effectiveDate"]
+    },
+    "TestRecord": {
+      "title": "Test Record",
+      "description": "A record used for testing form components.",
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "A test date value."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The ID of a linked owner."
+        },
+        "type": {
+          "type": "number",
+          "description": "A numeric type value (0-4)."
+        }
+      },
+      "required": ["date", "ownerId", "type"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/backend/entities/UserProfile"
+      },
+      "description": "Stores public profile information for each user."
+    },
+    "/globalUnitTypes/{typeId}": {
+        "schema": {
+            "$ref": "#/backend/entities/GlobalUnitType"
+        },
+        "description": "Stores the master list of all possible unit types available in the application."
+    },
+    "/globalUtilityTypes/{utilityTypeId}": {
+        "schema": {
+            "$ref": "#/backend/entities/GlobalUtilityType"
+        },
+        "description": "Stores the master list of all possible utility types for expenses."
+    },
+    "/globalPayableCategories/{categoryId}": {
+        "schema": {
+            "$ref": "#/backend/entities/GlobalPayableCategory"
+        },
+        "description": "Stores the master list of all possible categories for expenses (payables)."
+    },
+    "/globalPaymentMethods/{methodId}": {
+      "schema": {
+        "$ref": "#/backend/entities/GlobalPaymentMethod"
+      },
+      "description": "Stores the master list of all possible payment methods."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Note"
+      },
+      "description": "Stores the notes created by a specific user."
+    },
+    "/buildings/{buildingId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Building"
+      },
+      "description": "Stores building information."
+    },
+    "/buildings/{buildingId}/levels/{levelId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Level"
+      },
+      "description": "Stores the levels within a specific building."
+    },
+    "/buildings/{buildingId}/units/{unitId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Unit"
+      },
+      "description": "Stores the units within a specific building."
+    },
+    "/buildings/{buildingId}/owners/{ownerId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Owner"
+      },
+      "description": "Stores the unit owners for a building."
+    },
+    "/buildings/{buildingId}/payments/{paymentId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Payment"
+      },
+      "description": "Stores the maintenance payments (receivables) for all units in a building."
+    },
+    "/buildings/{buildingId}/payables/{payableId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Payable"
+      },
+      "description": "Stores the expenses (payables) for a building."
+    },
+    "/buildings/{buildingId}/employees/{employeeId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Employee"
+      },
+      "description": "Stores the employees for a building."
+    },
+    "/buildings/{buildingId}/employees/{employeeId}/salaryHistory/{historyId}": {
+      "schema": {
+        "$ref": "#/backend/entities/SalaryHistory"
+      },
+      "description": "Stores the salary adjustment history for a specific employee."
+    },
+    "/buildings/{buildingId}/serviceProviders/{providerId}": {
+      "schema": {
+        "$ref": "#/backend/entities/ServiceProvider"
+      },
+      "description": "Stores the service providers for a building."
+    },
+    "/buildings/{buildingId}/serviceProviders/{providerId}/paymentHistory/{historyId}": {
+        "schema": { "$ref": "#/backend/entities/ContractPaymentHistory" },
+        "description": "Stores the payment adjustment history for a specific contractual service provider."
+    },
+    "/testRecords/{recordId}": {
+      "schema": {
+        "$ref": "#/backend/entities/TestRecord"
+      },
+      "description": "Stores test records for form debugging."
+    }
+  }
+}

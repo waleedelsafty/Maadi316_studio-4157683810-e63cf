@@ -1,0 +1,16 @@
+# Exclude files from the AI's context
+# See https://firebase.google.com/docs/studio/aiexclude
+node_modules/
+.next/
+.firebase/
+.idx/
+out/
+build/
+coverage/
+*.log
+*.lock
+.env
+.DS_Store
+*.pem
+*.tsbuildinfo
+next-env.d.ts
