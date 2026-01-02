@@ -14,6 +14,11 @@ This is a Next.js application built with Firebase Studio for managing building i
 
 ## Version History
 
+### v0.2.0
+- **MVP Release**: The application has reached a stable, feature-complete state, ready for initial production use and real-world application.
+- **Foundation for Branching**: This version establishes the `main` branch as the stable foundation from which future feature development, such as user roles and advanced architecture, will be branched.
+- **Repository Cleanup**: Established a clean and secure repository by adding `.gitignore` and `.aiexclude` to prevent committing sensitive or unnecessary files like `node_modules` and `.firebase`.
+
 ### v0.1.10
 - **Refactored Unit Editing**: Replaced the complex inline unit editor on the "All Units" page with a streamlined flow, directing users to a dedicated and more stable "Edit Unit" page. This resolves previous data-binding issues and improves maintainability.
 - **Context-Aware Navigation**: Enhanced the "Edit Unit" page to intelligently navigate users back to their original page (either the "All Units" list or a specific "Level" view) after saving or canceling, preserving their workflow context.
@@ -33,7 +38,7 @@ This is a Next.js application built with Firebase Studio for managing building i
 - **Contextual Sidebar Navigation**: The main sidebar is now smarter, displaying contextual links for "Structure" and "Financials" only when a user is actively viewing a building.
 - **Critical Bug Fixes**: Resolved numerous client-side crashes and navigation errors that arose during the refactoring process, including fixing broken links, incorrect component imports, and table layout mismatches.
 
-### v0.1.7
+### v-0.1.7
 - **Centralized Payments Tab**: Added a dedicated "Payments" tab on the building detail page, creating a single place to record and view all financial transactions for a building.
 - **Smart Payment Form**: The "Record Payment" form now features a searchable combobox to find units by number or owner name. When a unit is selected, its details are displayed and the "Amount Paid" field is auto-filled with the quarterly fee.
 - **Dynamic Quarter Selection**: The quarter selection dropdowns are now dynamically populated, showing only relevant quarters from the building's financial start date to two quarters in the future, improving usability.
