@@ -1,9 +1,16 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Firebase
+.firebase
+*.firebase
+*.firebaserc
+
 # dependencies
+node_modules
 /node_modules
 /.pnp
 .pnp.js
+.pnp.cjs
 
 # testing
 /coverage
@@ -23,7 +30,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+.npm
 
 # local env files
 .env*.local
@@ -36,6 +43,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# studio
-.idx/
-.firebase/
+# Archives
+replica.tar.gz
+*.tar.gz
